@@ -17,6 +17,14 @@ st.caption("Simulação de demanda e capacidade baseada em RFQs – horizonte de
 # =====================
 st.sidebar.header("RFQs no Cenário")
 
+st.sidebar.divider()
+st.sidebar.subheader("Base de Dados")
+
+uploaded_file = st.sidebar.file_uploader(
+    "Analise_Investimento_Modelo",
+    type=["xlsx"]
+)
+
 if "rfqs" not in st.session_state:
     st.session_state.rfqs = []
 
@@ -75,7 +83,7 @@ st.stop()
 
 # Leitura da planilha
 df_rfq_raw = pd.read_excel(
-"Analise_Investimento_Modelo.xlsx",
+uploaded_file,
 sheet_name="1_RFQ_DadosVendas"
 )
 

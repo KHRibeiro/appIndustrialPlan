@@ -75,7 +75,7 @@ st.stop()
 
 # Leitura da planilha
 df_rfq_raw = pd.read_excel(
-uploaded_file,
+"Analise_Investimento_Modelo.xlsx",
 sheet_name="1_RFQ_DadosVendas"
 )
 

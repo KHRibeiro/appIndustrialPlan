@@ -69,8 +69,13 @@ st.info(
 
 df_rfq_vendas = pd.DataFrame({
     "RFQ": [],
-    "Ano": [],
-    "Volume Bruto": []
+    "Project": [],
+    "2026": [],
+    "2027": [],
+    "2028": [],
+    "2029": [],
+    "2030": [],
+    "2031": [],
 })
 
 st.dataframe(df_rfq_vendas)

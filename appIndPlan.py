@@ -63,22 +63,66 @@ rfqs = st.session_state.rfqs
 st.header("1️⃣ RFQs – Volumes Brutos de Vendas (5 anos)")
 
 st.info(
-    "Volumes brutos previstos por RFQ e por ano, "
+    "Volumes previstos por RFQ e por ano, "
     "oriundos da planilha **1_RFQ_DadosVendas**."
 )
 
-df_rfq_vendas = pd.DataFrame({
-    "RFQ": [],
-    "Project": [],
-    "2026": [],
-    "2027": [],
-    "2028": [],
-    "2029": [],
-    "2030": [],
-    "2031": [],
-})
 
-st.dataframe(df_rfq_vendas)
+if uploaded_file is None:
+st.warning("Faça o upload do arquivo Excel para continuar.")
+st.stop()
+
+
+# Leitura da planilha
+df_rfq_raw = pd.read_excel(
+uploaded_file,
+sheet_name="1_RFQ_DadosVendas"
+)
+
+
+# Limpeza básica
+df_rfq_raw.columns = df_rfq_raw.columns.astype(str).str.strip()
+
+
+# Renomear coluna RFQ
+df_rfq_raw = df_rfq_raw.rename(columns={"LINK": "RFQ"})
+
+
+# Filtrar RFQs selecionadas
+df_rfq_filtrado = df_rfq_raw[
+df_rfq_raw["RFQ"].isin(rfqs)
+][["RFQ"]].copy()
+
+if df_rfq_filtrado.empty:
+st.warning("Nenhuma RFQ selecionada encontrada na base.")
+st.stop()
+
+# Normalização: anos → linhas
+df_rfq_vendas = df_rfq_filtrado.melt(
+id_vars=["RFQ"],
+
+var_2026="2025",
+var_2026="2026",
+var_2026="2027",
+var_2026="2028",
+var_2026="2029",
+var_2026="2030"
+)
+
+
+df_rfq_vendas["2025"] = df_rfq_vendas["2025"].astype(int)
+df_rfq_vendas["2026"] = df_rfq_vendas["2026"].astype(int)
+df_rfq_vendas["2027"] = df_rfq_vendas["2027"].astype(int)
+df_rfq_vendas["2028"] = df_rfq_vendas["2028"].astype(int)
+df_rfq_vendas["2029"] = df_rfq_vendas["2029"].astype(int)
+df_rfq_vendas["2030"] = df_rfq_vendas["2030"].astype(int)
+
+
+# Exibição
+st.dataframe(
+df_rfq_vendas.sort_values(["RFQ", "2025", "2025", "2026","2027","2028","2029","2030"]),
+use_container_width=True
+)
 
 # =====================
 # ETAPA 2 – LN DADOS EXPORTADOS

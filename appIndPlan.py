@@ -2,29 +2,27 @@ import streamlit as st
 import pandas as pd
 
 # =====================
-# Configuração
+# CONFIGURAÇÃO
 # =====================
 st.set_page_config(
-    page_title="Simulador de Capacidade – RFQ",
+    page_title="Simulador de Capacidade – RFQ / Industrial Plan",
     layout="wide"
 )
 
-st.title("Simulador de Capacidade de Máquinas")
-st.caption("Simulação de demanda industrial baseada em RFQs – horizonte de 5 anos")
+st.title("Simulador de Capacidade Industrial")
+st.caption("Simulação de demanda e capacidade baseada em RFQs – horizonte de 5 anos")
 
 # =====================
-# SIDEBAR – RFQs no cenário
+# SIDEBAR – CONTROLE DE RFQs
 # =====================
 st.sidebar.header("RFQs no Cenário")
 
-# Inicializa lista no session_state
 if "rfqs" not in st.session_state:
     st.session_state.rfqs = []
 
-# Campo de entrada
 nova_rfq = st.sidebar.text_input(
     "Adicionar RFQ",
-    placeholder="Ex: 123456"
+    placeholder="Ex: RFQ_123456"
 )
 
 col_add, col_clear = st.sidebar.columns(2)
@@ -40,14 +38,13 @@ with col_clear:
 
 st.sidebar.divider()
 
-# Lista de RFQs adicionadas
-st.sidebar.subheader("RFQs selecionadas")
+st.sidebar.subheader("RFQs Selecionadas")
 
 if not st.session_state.rfqs:
     st.sidebar.info("Nenhuma RFQ adicionada")
 else:
     for i, rfq in enumerate(st.session_state.rfqs):
-        col_rfq, col_remove = st.sidebar.columns([3, 1])
+        col_rfq, col_remove = st.sidebar.columns([4, 1])
         with col_rfq:
             st.write(rfq)
         with col_remove:
@@ -56,72 +53,94 @@ else:
                 st.experimental_rerun()
 
 st.sidebar.divider()
-
 st.sidebar.button("Rodar Simulação")
 
+rfqs = st.session_state.rfqs
 
 # =====================
-# ETAPA 2 – Distribuição por Centro de Trabalho
+# ETAPA 1 – RFQ DADOS DE VENDAS
 # =====================
-st.header("2️⃣ Distribuição de Volume por Centro de Trabalho (WC)")
+st.header("1️⃣ RFQs – Volumes Brutos de Vendas (5 anos)")
 
 st.info(
-    "Os centros de trabalho e suas taxas de produção por RFQ "
-    "serão obtidos da planilha '2_LN_DadosExportados'."
+    "Volumes brutos previstos por RFQ e por ano, "
+    "oriundos da planilha **1_RFQ_DadosVendas**."
+)
+
+df_rfq_vendas = pd.DataFrame({
+    "RFQ": [],
+    "Ano": [],
+    "Volume Bruto": []
+})
+
+st.dataframe(df_rfq_vendas)
+
+# =====================
+# ETAPA 2 – LN DADOS EXPORTADOS
+# =====================
+st.header("2️⃣ Distribuição por Centro de Trabalho (LN)")
+
+st.info(
+    "Centros de trabalho (WC) envolvidos por RFQ, "
+    "com taxa de produção específica por cotação "
+    "(planilha **2_LN_DadosExportados**)."
 )
 
 st.latex(
     r"\text{Volume WC} = \frac{\text{Volume Bruto do Ano}}{\text{Taxa de Produção do WC (RFQ)}}"
 )
 
-df_wc = pd.DataFrame({
+df_ln_wc = pd.DataFrame({
     "RFQ": [],
     "Ano": [],
     "Centro de Trabalho (WC)": [],
-    "Taxa de Produção": [],
-    "Volume Distribuído WC": []
+    "Taxa de Produção WC": [],
+    "Volume Calculado WC": []
 })
 
-st.dataframe(df_wc)
+st.dataframe(df_ln_wc)
 
 # =====================
-# ETAPA 3 – Simulação de Demanda (Plano Industrial)
+# ETAPA 3 – SIMULAÇÃO DE DEMANDA
 # =====================
-st.header("3️⃣ Simulação de Demanda – Plano Industrial")
+st.header("3️⃣ Simulação de Demanda – Industrial Plan")
 
 st.info(
-    "Os volumes distribuídos por WC serão somados à demanda natural "
-    "do Plano Industrial para cada ano."
+    "Soma da demanda natural do Plano Industrial "
+    "com os volumes calculados das RFQs selecionadas "
+    "(planilha **3_Industrial_Plan_Idash**)."
 )
 
-df_demanda_simulada = pd.DataFrame({
+df_demanda = pd.DataFrame({
     "Ano": [],
     "Centro de Trabalho (WC)": [],
-    "Demanda Natural (Plano Industrial)": [],
+    "Demanda Natural (Industrial Plan)": [],
     "Demanda RFQs": [],
     "Demanda Total Simulada": []
 })
 
-st.dataframe(df_demanda_simulada)
+st.dataframe(df_demanda)
 
 # =====================
-# ETAPA 4 – Capacidade e Quantidade de Máquinas
+# ETAPA 4 – CAPACIDADE E INVESTIMENTO
 # =====================
-st.header("4️⃣ Análise de Capacidade e Máquinas")
+st.header("4️⃣ Capacidade, Máquinas e Investimento")
 
 st.info(
-    "Nesta etapa será avaliada a capacidade necessária por WC, "
-    "comparando com a quantidade de máquinas existente."
+    "Análise de capacidade considerando quantidade de máquinas, "
+    "capacidade planejada, OEE e verificação de necessidade de investimento."
 )
 
 df_capacidade = pd.DataFrame({
     "Ano": [],
     "Centro de Trabalho (WC)": [],
+    "Capacidade Planejada": [],
+    "OEE (%)": [],
+    "Capacidade Efetiva": [],
     "Demanda Total": [],
-    "Capacidade por Máquina": [],
-    "Máquinas Necessárias": [],
     "Máquinas Existentes": [],
-    "Necessidade de Investimento": []
+    "Máquinas Necessárias": [],
+    "Status": []  # OK / INVEST
 })
 
 st.dataframe(df_capacidade)
@@ -129,33 +148,28 @@ st.dataframe(df_capacidade)
 # =====================
 # RESUMO EXECUTIVO
 # =====================
-rfqs = st.session_state.rfqs
-
-st.header("📊 Resumo Executivo da Simulação")
+st.header("📊 Resumo Executivo")
 
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.metric("RFQs Simuladas", len(rfqs))
+    st.metric("RFQs no Cenário", len(rfqs))
 
 with col2:
-    st.metric("WCs Impactados", "--")
+    st.metric("Centros de Trabalho Impactados", "--")
 
 with col3:
-    st.metric("Investimentos Necessários", "--")
-    
-if not st.session_state.rfqs:
-    st.warning("Nenhuma RFQ adicionada ao cenário")
+    st.metric("WCs com Necessidade de Investimento", "--")
 
 # =====================
 # EXPORTAÇÃO
 # =====================
-st.header("💾 Exportação")
+st.header("💾 Exportação e Cenários")
 
 col_exp1, col_exp2 = st.columns(2)
 
 with col_exp1:
-    st.button("Exportar Resultados para Excel")
+    st.button("Exportar Resultados (Excel)")
 
 with col_exp2:
     st.button("Salvar Cenário de Simulação")

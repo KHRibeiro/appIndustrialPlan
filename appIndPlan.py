@@ -13,41 +13,52 @@ st.title("Simulador de Capacidade de Máquinas")
 st.caption("Simulação de demanda industrial baseada em RFQs – horizonte de 5 anos")
 
 # =====================
-# SIDEBAR – Entrada de RFQs
+# SIDEBAR – RFQs no cenário
 # =====================
-st.sidebar.header("RFQs para Simulação")
+st.sidebar.header("RFQs no Cenário")
 
-rfq_input = st.sidebar.text_input(
-    "Número(s) da RFQ",
-    help="Informe uma ou mais RFQs separadas por vírgula (ex: 12345, 67890)"
+# Inicializa lista no session_state
+if "rfqs" not in st.session_state:
+    st.session_state.rfqs = []
+
+# Campo de entrada
+nova_rfq = st.sidebar.text_input(
+    "Adicionar RFQ",
+    placeholder="Ex: 123456"
 )
 
-rfqs = [r.strip() for r in rfq_input.split(",") if r.strip()]
+col_add, col_clear = st.sidebar.columns(2)
 
-st.sidebar.write("RFQs consideradas:")
-st.sidebar.write(rfqs if rfqs else "Nenhuma RFQ inserida")
+with col_add:
+    if st.button("Adicionar"):
+        if nova_rfq and nova_rfq not in st.session_state.rfqs:
+            st.session_state.rfqs.append(nova_rfq)
+
+with col_clear:
+    if st.button("Limpar"):
+        st.session_state.rfqs = []
+
+st.sidebar.divider()
+
+# Lista de RFQs adicionadas
+st.sidebar.subheader("RFQs selecionadas")
+
+if not st.session_state.rfqs:
+    st.sidebar.info("Nenhuma RFQ adicionada")
+else:
+    for i, rfq in enumerate(st.session_state.rfqs):
+        col_rfq, col_remove = st.sidebar.columns([3, 1])
+        with col_rfq:
+            st.write(rfq)
+        with col_remove:
+            if st.button("❌", key=f"remove_{i}"):
+                st.session_state.rfqs.pop(i)
+                st.experimental_rerun()
 
 st.sidebar.divider()
 
 st.sidebar.button("Rodar Simulação")
 
-# =====================
-# ETAPA 1 – Volumes de vendas (RFQ)
-# =====================
-st.header("1️⃣ Volumes Brutos por RFQ (5 anos)")
-
-st.info(
-    "Nesta etapa serão carregados os volumes brutos previstos por RFQ "
-    "a partir da planilha '1_RFQ_DadosVendas'."
-)
-
-df_volumes_rfq = pd.DataFrame({
-    "RFQ": [],
-    "Ano": [],
-    "Volume Bruto": []
-})
-
-st.dataframe(df_volumes_rfq)
 
 # =====================
 # ETAPA 2 – Distribuição por Centro de Trabalho

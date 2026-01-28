@@ -1,82 +1,122 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="Simulador de Capacidade", layout="wide")
-
-st.title("Simulador de Demanda x Capacidade de Máquinas")
-
 # =====================
-# Carregar dados
+# Configuração da página
 # =====================
-@st.cache_data
-def carregar_dados():
-    maquinas = pd.read_excel("dados/maquinas.xlsx")
-    processos = pd.read_excel("dados/processos.xlsx")
-    cotacoes = pd.read_excel("dados/cotacoes.xlsx")
-    return maquinas, processos, cotacoes
-
-maquinas, processos, cotacoes = carregar_dados()
-
-# =====================
-# Seleção da cotação
-# =====================
-cotacao_sel = st.selectbox(
-    "Selecione a cotação para simulação",
-    cotacoes["cotacao"].unique()
+st.set_page_config(
+    page_title="Simulador de Capacidade Industrial",
+    layout="wide"
 )
 
-demanda = cotacoes[cotacoes["cotacao"] == cotacao_sel]
-
-st.subheader("Demanda da cotação")
-st.dataframe(demanda)
+st.title("Simulador de Demanda x Capacidade")
+st.caption("Ferramenta de apoio à simulação de cotações – Engenharia de Manufatura")
 
 # =====================
-# Cálculo da carga
+# Sidebar – Controle da simulação
 # =====================
-df = demanda.merge(processos, on="produto", how="left")
+st.sidebar.header("Parâmetros da Simulação")
 
-df["carga_min"] = df["volume"] * df["tempo_min_por_peca"]
-
-carga_maquina = (
-    df.groupby("maquina", as_index=False)["carga_min"]
-    .sum()
+cotacao_nome = st.sidebar.text_input(
+    "Identificação da cotação",
+    value="COT_XXX"
 )
 
-carga_maquina["carga_horas"] = carga_maquina["carga_min"] / 60
-
-resultado = carga_maquina.merge(maquinas, on="maquina", how="left")
-
-resultado["ocupacao_%"] = (
-    resultado["carga_horas"] / resultado["capacidade_horas_mes"] * 100
+cenario = st.sidebar.selectbox(
+    "Cenário",
+    ["Base", "Otimista", "Pessimista"]
 )
 
-# =====================
-# Resultados
-# =====================
-st.subheader("Resultado por máquina")
-st.dataframe(
-    resultado.style.format({
-        "carga_horas": "{:.1f}",
-        "ocupacao_%": "{:.1f}"
-    })
+fator_volume = st.sidebar.slider(
+    "Fator de ajuste de volume (%)",
+    min_value=50,
+    max_value=150,
+    value=100,
+    step=5
 )
 
-# =====================
-# Gráfico
-# =====================
-st.subheader("Ocupação das máquinas (%)")
-st.bar_chart(
-    resultado.set_index("maquina")["ocupacao_%"]
+considerar_2_turno = st.sidebar.checkbox(
+    "Considerar 2º turno"
 )
 
+st.sidebar.divider()
+st.sidebar.button("Rodar simulação")
+
 # =====================
-# Alertas de gargalo
+# Área principal
+# =====================
+st.subheader("Resumo da Simulação")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.metric(
+        label="Carga Total (h)",
+        value="--"
+    )
+
+with col2:
+    st.metric(
+        label="Capacidade Total (h)",
+        value="--"
+    )
+
+with col3:
+    st.metric(
+        label="Ocupação Média (%)",
+        value="--"
+    )
+
+# =====================
+# Demanda (placeholder)
+# =====================
+st.subheader("Demanda considerada")
+
+df_demanda = pd.DataFrame({
+    "Produto": [],
+    "Volume Base": [],
+    "Volume Simulado": []
+})
+
+st.dataframe(df_demanda)
+
+# =====================
+# Resultado por máquina (placeholder)
+# =====================
+st.subheader("Resultado por Máquina")
+
+df_resultado = pd.DataFrame({
+    "Máquina": [],
+    "Carga (h)": [],
+    "Capacidade (h)": [],
+    "Ocupação (%)": []
+})
+
+st.dataframe(df_resultado)
+
+# =====================
+# Gráficos (placeholder)
+# =====================
+st.subheader("Visualização de Carga")
+
+st.info("Gráficos de ocupação e gargalos aparecerão aqui")
+
+# =====================
+# Gargalos
 # =====================
 st.subheader("⚠️ Gargalos")
-gargalos = resultado[resultado["ocupacao_%"] > 100]
 
-if gargalos.empty:
-    st.success("Nenhuma máquina sobrecarregada")
-else:
-    st.error("Máquinas acima da capacidade!")
-    st.dataframe(gargalos)
+st.success("Nenhum gargalo identificado (simulação ainda não executada)")
+
+# =====================
+# Exportação
+# =====================
+st.subheader("Exportar Resultados")
+
+col_exp1, col_exp2 = st.columns(2)
+
+with col_exp1:
+    st.button("Exportar para Excel")
+
+with col_exp2:
+    st.button("Salvar cenário")

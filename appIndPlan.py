@@ -129,6 +129,8 @@ st.dataframe(df_capacidade)
 # =====================
 # RESUMO EXECUTIVO
 # =====================
+rfqs = st.session_state.rfqs
+
 st.header("📊 Resumo Executivo da Simulação")
 
 col1, col2, col3 = st.columns(3)
@@ -141,6 +143,9 @@ with col2:
 
 with col3:
     st.metric("Investimentos Necessários", "--")
+    
+if not st.session_state.rfqs:
+    st.warning("Nenhuma RFQ adicionada ao cenário")
 
 # =====================
 # EXPORTAÇÃO

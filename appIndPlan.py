@@ -196,7 +196,10 @@ df_base = df_ip.merge(
 
 # Garantir que todas as colunas MRSRFQ existam
 for ano in anos:
-    df_base[f"MRSRFQ_{ano}"] = df_base.get(f"MRSRFQ_{ano}", 0).fillna(0)
+    if f"MRSRFQ_{ano}" not in df_base.columns:
+        df_base[f"MRSRFQ_{ano}"] = 0
+    else:
+        df_base[f"MRSRFQ_{ano}"] = df_base[f"MRSRFQ_{ano}"].fillna(0)
 
 # Total de capacidade = PLA_CAP (modelo atual)
 for ano in anos:

@@ -121,29 +121,75 @@ st.dataframe(
 )
 
 # =====================
-# ETAPA 2 – LN DADOS EXPORTADOS
+# ETAPA 2 – DISTRIBUIÇÃO POR CENTRO DE TRABALHO (LN)
 # =====================
 st.header("2️⃣ Distribuição por Centro de Trabalho (LN)")
 
 st.info(
-    "Centros de trabalho (WC) envolvidos por RFQ, "
-    "com taxa de produção específica por cotação "
+    "Distribuição do volume bruto das RFQs por centro de trabalho (WC), "
+    "utilizando a taxa de produção específica por RFQ × WC "
     "(planilha **2_LN_DadosExportados**)."
 )
 
-st.latex(
-    r"\text{Volume WC} = \frac{\text{Volume Bruto do Ano}}{\text{Taxa de Produção do WC (RFQ)}}"
+# Leitura da planilha LN
+df_ln_raw = pd.read_excel(
+    uploaded_file,
+    sheet_name="2_LN_DadosExportados"
 )
 
-df_ln_wc = pd.DataFrame({
-    "RFQ": [],
-    "Ano": [],
-    "Centro de Trabalho (WC)": [],
-    "Taxa de Produção WC": [],
-    "Volume Calculado WC": []
-})
+# Limpeza básica
+df_ln_raw.columns = df_ln_raw.columns.astype(str).str.strip()
 
-st.dataframe(df_ln_wc)
+# Renomear colunas para padrão interno
+df_ln = df_ln_raw.rename(
+    columns={
+        "Item Fabricado": "RFQ",
+        "Cent. Trab.": "WC",
+        "Taxa de produção": "Taxa"
+    }
+)
+
+# Manter apenas colunas relevantes
+df_ln = df_ln[["RFQ", "WC", "Taxa"]].copy()
+
+# Filtrar apenas RFQs selecionadas na simulação
+df_ln = df_ln[df_ln["RFQ"].isin(rfqs)]
+
+if df_ln.empty:
+    st.warning("Nenhum WC encontrado para as RFQs selecionadas.")
+    st.stop()
+
+# =====================
+# JOIN RFQ × ANO × VOLUME (Etapa 1) com LN (WC × Taxa)
+# =====================
+df_ln_wc = df_rfq_vendas.merge(
+    df_ln,
+    on="RFQ",
+    how="inner"
+)
+
+# =====================
+# Cálculo do volume por WC (fórmula central da Etapa 2)
+# =====================
+df_ln_wc["Volume Calculado WC"] = (
+    df_ln_wc["Volume Bruto"] / df_ln_wc["Taxa"]
+)
+
+# Organização final
+df_ln_wc = df_ln_wc[[
+    "RFQ",
+    "Ano",
+    "WC",
+    "Taxa",
+    "Volume Bruto",
+    "Volume Calculado WC"
+]].sort_values(["WC", "Ano", "RFQ"])
+
+# Exibição
+st.dataframe(
+    df_ln_wc,
+    use_container_width=True
+)
 
 # =====================
 # ETAPA 3 – SIMULAÇÃO DE DEMANDA

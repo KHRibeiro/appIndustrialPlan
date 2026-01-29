@@ -66,7 +66,7 @@ else:
             st.write(rfq)
         with col_remove:
             if st.button("❌", key=f"remove_{rfq}"):
-            st.session_state.rfqs.remove(rfq)
+                st.session_state.rfqs.remove(rfq)
 
 st.sidebar.divider()
 st.sidebar.button("Rodar Simulação")

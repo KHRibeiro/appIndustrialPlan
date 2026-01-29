@@ -78,7 +78,8 @@ df_rfq = pd.read_excel(
 df_rfq.columns = df_rfq.columns.astype(str).str.strip()
 df_rfq = df_rfq.rename(columns={"LINK": "RFQ"})
 
-anos = ["2026", "2027", "2028", "2029", "2030"]
+anos = [c for c in df_rfq.columns if str(c).isdigit()]
+anos = sorted(anos)
 
 df_rfq_sel = df_rfq[df_rfq["RFQ"].isin(rfqs)][["RFQ"] + anos].copy()
 df_rfq_sel[anos] = df_rfq_sel[anos].fillna(0)
@@ -118,7 +119,8 @@ df_ln = df_ln.dropna(subset=["Taxa"])
 df_volwc = df_ln.merge(df_rfq_sel, on="RFQ", how="inner")
 
 for ano in anos:
-    df_volwc[f"VOLWC_{ano}"] = df_volwc[ano] / df_volwc["Taxa"]
+    col = str(ano)
+    df_volwc[f"VOLWC_{col}"] = df_volwc[col] / df_volwc["Taxa"]
 
 df_volwc = (
     df_volwc

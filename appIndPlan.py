@@ -182,14 +182,9 @@ df_ip = df_ip_raw.rename(
 df_ip["WC"] = df_ip["WC"].astype(str).str.strip()
 
 # Capacidades planejadas
-#for ano in anos:
- #   df_ip[f"PLA_CAP_{ano}"] = pd.to_numeric(
-  #      df_ip.get(f"PLA_CAP_{ano}", 0), errors="coerce"
-   # ).fillna(0)
-
 for ano in anos:
-    df_ip[f"MRS_{ano}"] = pd.to_numeric(
-        df_ip.get(f"MRS_{ano}", 0), errors="coerce"
+    df_ip[f"PLA_CAP_{ano}"] = pd.to_numeric(
+        df_ip.get(f"PLA_CAP_{ano}", 0), errors="coerce"
     ).fillna(0)
 
 # Merge com volumes RFQ por WC
@@ -237,8 +232,7 @@ if filtro_wc:
 ordem = (
     ["NECESSÁRIO INVESTIR?", "WC", "Actual_machine", "OEE"]
     + [f"MRSRFQ_{ano}" for ano in anos]
-    #+ [f"PLA_CAP_{ano}" for ano in anos]
-    + [f"MRS_{ano}" for ano in anos]
+    + [f"PLA_CAP_{ano}" for ano in anos]
     + [f"TOTAL_CAP_{ano}" for ano in anos]
     + status_cols
 )

@@ -222,6 +222,28 @@ colunas_finais = (
     + [f"PLA_CAP_{a}" for a in anos]
 )
 
-df_final = df_sim[colunas_finais]
+# ---------------------
+# FILTRO – WCs AFETADOS POR RFQs
+# ---------------------
+st.subheader("🔎 Filtro de Visualização")
+
+mostrar_apenas_afetados = st.checkbox(
+    "Mostrar apenas WCs afetados pelas RFQs",
+    value=True
+)
+
+# Identificar colunas VOLWC
+col_volwc = [f"VOLWC_{ano}" for ano in anos if f"VOLWC_{ano}" in df_sim.columns]
+
+# Criar flag de impacto
+df_sim["WC_AFETADO_RFQ"] = df_sim[col_volwc].sum(axis=1) > 0
+
+# Aplicar filtro se marcado
+df_view = df_sim.copy()
+
+if mostrar_apenas_afetados:
+    df_view = df_view[df_view["WC_AFETADO_RFQ"]]
+
+df_final = df_view[colunas_finais]
 
 st.dataframe(df_final, use_container_width=True)

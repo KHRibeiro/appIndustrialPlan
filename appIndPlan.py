@@ -108,6 +108,14 @@ df_ln = pd.read_excel(
     sheet_name="2_LN_DadosExportados"
 )
 
+# Normalizar WC da LN para padrão do Industrial Plan
+df_ln["WC"] = (
+    "HOR-" +
+    df_ln["WC"]
+        .astype(str)
+        .str.strip()
+)
+
 df_ln.columns = (
     df_ln.columns.astype(str)
     .str.strip()
@@ -154,6 +162,20 @@ df_ip = pd.read_excel(
     uploaded_file,
     sheet_name="3_Industrial_Plan_Idash"
 )
+
+df_industrial_plan["WC"] = (
+    df_industrial_plan["WC"]
+    .astype(str)
+    .str.strip()
+)
+
+st.subheader("🔎 Validação de WC")
+
+st.write("WCs LN (amostra):")
+st.write(df_ln["WC"].unique()[:10])
+
+st.write("WCs Industrial Plan (amostra):")
+st.write(df_industrial_plan["WC"].unique()[:10])
 
 df_ip.columns = df_ip.columns.astype(str).str.strip()
 

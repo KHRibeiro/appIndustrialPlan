@@ -137,8 +137,14 @@ df_ln_raw = pd.read_excel(
     sheet_name="2_LN_DadosExportados"
 )
 
-# Limpeza básica
-df_ln_raw.columns = df_ln_raw.columns.astype(str).str.strip()
+# Limpeza e padronização dos nomes das colunas
+df_ln_raw.columns = (
+    df_ln_raw.columns
+    .astype(str)
+    .str.strip()
+    .str.replace("\n", "", regex=False)
+    .str.replace("\xa0", "", regex=False)
+)
 
 st.subheader("🔍 Diagnóstico – Colunas LN")
 st.write("Colunas originais:")
@@ -147,14 +153,32 @@ st.write(list(df_ln_raw.columns))
 # Renomear colunas para padrão interno
 df_ln = df_ln_raw.rename(
     columns={
-        "Item Fabricado": "RFQ",
+        "Item fabricado": "RFQ",
         "Cent. Trab.": "WC",
         "Taxa de produção": "Taxa"
     }
 )
 
+#Validação Segura
+colunas_esperadas = ["RFQ", "WC", "Taxa"]
+faltando = [c for c in colunas_esperadas if c not in df_ln.columns]
+
+if faltando:
+    st.error(f"Colunas não encontradas na LN: {faltando}")
+    st.stop()
+
 # Manter apenas colunas relevantes
 df_ln = df_ln[["RFQ", "WC", "Taxa"]].copy()
+
+#Limpeza de Dados
+df_ln = df_ln.dropna(subset=["RFQ", "WC", "Taxa"])
+
+df_ln["Taxa"] = pd.to_numeric(df_ln["Taxa"], errors="coerce")
+df_ln = df_ln.dropna(subset=["Taxa"])
+
+# Visualização de dados
+st.subheader("📋 Etapa 2 – Estrutura RFQ × WC × Taxa")
+st.dataframe(df_ln, use_container_width=True)
 
 # Filtrar apenas RFQs selecionadas na simulação
 df_ln = df_ln[df_ln["RFQ"].isin(rfqs)]

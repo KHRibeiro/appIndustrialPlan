@@ -340,50 +340,105 @@ df_industrial_plan["WC"] = df_industrial_plan["WC"].astype(str).str.strip()
 
 
 # =========================
-# ETAPA 4 – FORMATO WIDE
+# ETAPA 4 - FORMATO EXECUTIVO (WIDE)
 # =========================
 
-anos = sorted(df_capacidade["Ano"].unique())
+import pandas as pd
+import numpy as np
+import streamlit as st
 
-df_carga = df_capacidade.pivot(
-    index="WC",
-    columns="Ano",
-    values="Carga_Total_WC"
+st.header("📊 Industrial Plan Consolidado (Visão Executiva)")
+
+# -------------------------
+# 1. Validação básica
+# -------------------------
+colunas_necessarias = [
+    "WC",
+    "Ano",
+    "Carga_Total_WC",
+    "Capacidade_Total",
+    "Status"
+]
+
+faltantes = [c for c in colunas_necessarias if c not in df_resultado_wc_ano.columns]
+if faltantes:
+    st.error(f"Colunas faltantes no dataframe base: {faltantes}")
+    st.stop()
+
+# -------------------------
+# 2. Pivotar CARGA
+# -------------------------
+df_carga_wide = (
+    df_resultado_wc_ano
+    .pivot(index="WC", columns="Ano", values="Carga_Total_WC")
+    .add_prefix("CARGA_")
 )
 
-df_cap = df_capacidade.pivot(
-    index="WC",
-    columns="Ano",
-    values="Capacidade_Planejada"
+# -------------------------
+# 3. Pivotar CAPACIDADE
+# -------------------------
+df_cap_wide = (
+    df_resultado_wc_ano
+    .pivot(index="WC", columns="Ano", values="Capacidade_Total")
+    .add_prefix("CAP_")
 )
 
-df_status = df_capacidade.pivot(
-    index="WC",
-    columns="Ano",
-    values="Status"
+# -------------------------
+# 4. Pivotar STATUS
+# -------------------------
+df_status_wide = (
+    df_resultado_wc_ano
+    .pivot(index="WC", columns="Ano", values="Status")
+    .add_prefix("STATUS_")
 )
 
-# Renomear colunas
-df_carga.columns = [f"Carga_{ano}" for ano in df_carga.columns]
-df_cap.columns   = [f"Cap_{ano}"   for ano in df_cap.columns]
-df_status.columns = [f"Status_{ano}" for ano in df_status.columns]
-
-# Consolidar tudo
-df_capacidade_wide = (
-    df_carga
-    .join(df_cap)
-    .join(df_status)
+# -------------------------
+# 5. Consolidar tudo
+# -------------------------
+df_industrial_plan_final = (
+    df_carga_wide
+    .join(df_cap_wide)
+    .join(df_status_wide)
     .reset_index()
 )
-# =====================
-# EXPORTAÇÃO
-# =====================
-st.header("💾 Exportação e Cenários")
 
-col_exp1, col_exp2 = st.columns(2)
+# -------------------------
+# 6. Ordenar colunas por ano
+# -------------------------
+anos = sorted(df_resultado_wc_ano["Ano"].unique())
 
-with col_exp1:
-    st.button("Exportar Resultados (Excel)")
+colunas_ordenadas = ["WC"]
 
-with col_exp2:
-    st.button("Salvar Cenário de Simulação")
+for ano in anos:
+    colunas_ordenadas.extend([
+        f"CARGA_{ano}",
+        f"CAP_{ano}",
+        f"STATUS_{ano}"
+    ])
+
+df_industrial_plan_final = df_industrial_plan_final[colunas_ordenadas]
+
+# -------------------------
+# 7. Exibição
+# -------------------------
+st.dataframe(
+    df_industrial_plan_final,
+    use_container_width=True
+)
+
+# -------------------------
+# 8. Download Excel
+# -------------------------
+def to_excel(df):
+    from io import BytesIO
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="Industrial_Plan")
+    return output.getvalue()
+
+st.download_button(
+    label="📥 Download Industrial Plan (Excel)",
+    data=to_excel(df_industrial_plan_final),
+    file_name="industrial_plan_final.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)

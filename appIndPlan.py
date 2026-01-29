@@ -329,7 +329,7 @@ st.markdown("### 📤 Exportar resultado")
 
 buffer = io.BytesIO()
 
-with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
+with pd.ExcelWriter(buffer) as writer:
     df_final.to_excel(
         writer,
         index=False,

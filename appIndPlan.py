@@ -157,23 +157,6 @@ df_mrsrfq_wc = (
 
 st.dataframe(df_mrsrfq_wc, use_container_width=True)
 
-
-# =====================
-# FLAG – WC AFETADO POR RFQs
-# =====================
-impacto = []
-
-for ano in anos:
-    novo = f"MRSRFQ_{ano}"
-    orig = f"MRSRFQ_ORIG_{ano}"
-
-    if novo in df_sim.columns and orig in df_sim.columns:
-        impacto.append(
-            df_sim[novo].fillna(0) > df_sim[orig].fillna(0)
-        )
-
-df_sim["WC_AFETADO_RFQ"] = pd.concat(impacto, axis=1).any(axis=1)
-
 # =====================
 # ETAPA 4 – Capacidade & Investimento
 # =====================

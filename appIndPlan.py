@@ -191,6 +191,18 @@ df_base = df_ip.merge(
     how="left"
 )
 
+# =====================
+# FLAG – WC afetado por RFQ
+# =====================
+volwc_cols = [f"VOLWC_{ano}" for ano in anos]
+
+df_base["WC_AFETADO_RFQ"] = (
+    df_base[volwc_cols]
+    .fillna(0)
+    .gt(0)
+    .any(axis=1)
+)
+
 # Capacidades planejadas e requeridas
 for ano in anos:
     df_base[f"REQ_CAP_{ano}"] = pd.to_numeric(
@@ -242,10 +254,11 @@ df_base["NECESSÁRIO INVESTIR?"] = np.where(
     "OK"
 )
 
-# Filtro de WCs afetados
+# Filtro de WCs afetados pelas RFQs
 filtro_wc = st.checkbox("Mostrar apenas WCs afetados pelas RFQs")
+
 if filtro_wc:
-    df_base = df_base[df_base["NECESSÁRIO INVESTIR?"] == "INVEST"]
+    df_base = df_base[df_base["WC_AFETADO_RFQ"]]
 
 # Ordenação final
 ordem = (

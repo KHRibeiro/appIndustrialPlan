@@ -441,9 +441,7 @@ df["NECESSÁRIO INVESTIR?"] = np.where(
 # Ordenação final das colunas
 # -------------------------------------------------
 ordem = (
-    ["NECESSÁRIO INVESTIR?", "WC ID", "WC NAME", "Actual machine"]
-    + [f"MRSRFQ_{ano}" for ano in anos if f"MRSRFQ_{ano}" in df.columns]
-    + [f"MRS_{ano}" for ano in anos if f"MRS_{ano}" in df.columns]
+    ["NECESSÁRIO INVESTIR?", "WC"]
     + [f"REQ_CAP_{ano}" for ano in anos]
     + [f"PLA_CAP_{ano}" for ano in anos if f"PLA_CAP_{ano}" in df.columns]
     + [f"TOTAL_CAP_{ano}" for ano in anos]

@@ -177,6 +177,7 @@ df_ip_raw = pd.read_excel(
 df_ip = df_ip_raw.rename(
     columns={
         "WC ID": "WC",
+        "WC Name": "WC_NAME",
         "Actual machine": "Actual_machine",
         "Standard Oee": "OEE"
     }
@@ -184,11 +185,18 @@ df_ip = df_ip_raw.rename(
 
 # Limpar nomes de WCs
 df_ip["WC"] = df_ip["WC"].astype(str).str.strip()
+df_ip["WC_NAME"] = df_ip["WC_NAME"].astype(str).str.strip()
 
 df_base = df_ip.merge(
     df_volwc_wc,
     on="WC",
     how="left"
+)
+
+df_base["WC_FULL"] = (
+    df_base["WC"].astype(str)
+    + " - "
+    + df_base["WC_NAME"].fillna("")
 )
 
 # =====================
@@ -263,12 +271,12 @@ if filtro_wc:
 
 # Ordenação final
 ordem = (
-    ["NECESSÁRIO INVESTIR?", "WC", "Actual_machine", "OEE"]
+    ["RFQ", "NECESSÁRIO INVESTIR?", "WC_FULL", "Actual_machine", "OEE"]
     + [f"MRSRFQ_{ano}" for ano in anos]
     + [f"PLA_CAP_{ano}" for ano in anos]
-    + [f"TOTAL_CAP_{ano}" for ano in anos]
     + status_cols
 )
+
 ordem = [c for c in ordem if c in df_base.columns]
 
 df_final = df_base[ordem].copy()

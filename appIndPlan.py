@@ -26,6 +26,13 @@ uploaded_file = st.sidebar.file_uploader(
     type=["xlsx"]
 )
 
+# =====================
+# VALIDAÇÃO – Arquivo carregado
+# =====================
+if uploaded_file is None:
+    st.info("📂 Por favor, carregue a planilha **Analise_Investimento_Modelo.xlsx** para iniciar a simulação.")
+    st.stop()
+
 if "rfqs" not in st.session_state:
     st.session_state.rfqs = []
 

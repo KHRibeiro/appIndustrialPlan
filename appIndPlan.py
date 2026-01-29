@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 
 # =====================
 # CONFIGURAÇÃO
@@ -220,9 +221,7 @@ df_base["NECESSÁRIO INVESTIR?"] = np.where(
 st.checkbox("Mostrar apenas WCs afetados pelas RFQs", key="filtro_wc")
 
 if st.session_state.filtro_wc:
-    df_base = df_base[
-        df_base[[f"MRSRFQ_{ano}" for ano in anos]].sum(axis=1) > 0
-    ]
+    df_base = df_base[df_base["NECESSÁRIO INVESTIR?"] == "INVEST"]
 
 # ordenação final
 ordem = (

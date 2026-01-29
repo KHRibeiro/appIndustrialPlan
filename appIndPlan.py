@@ -198,6 +198,8 @@ for ano in anos:
 #    how="left"
 #)
 
+df_base=df_ip
+
 #st.dataframe(df_mrsrfq_wc, use_container_width=True)
 
 # Garantir que todas as colunas MRSRFQ existam

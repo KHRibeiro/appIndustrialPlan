@@ -163,11 +163,13 @@ st.dataframe(df_mrsrfq_wc, use_container_width=True)
 # =====================
 st.header("4️⃣ Capacidade, Máquinas e Investimento")
 
+# Leitura do Industrial Plan
 df_ip_raw = pd.read_excel(
     uploaded_file,
     sheet_name="3_Industrial_Plan_Idash"
 )
 
+# Renomear colunas
 df_ip = df_ip_raw.rename(
     columns={
         "WC ID": "WC",
@@ -176,30 +178,31 @@ df_ip = df_ip_raw.rename(
     }
 )
 
+# Limpar nomes de WCs
 df_ip["WC"] = df_ip["WC"].astype(str).str.strip()
 
-# capacidades planejadas
+# Capacidades planejadas
 for ano in anos:
     df_ip[f"PLA_CAP_{ano}"] = pd.to_numeric(
         df_ip.get(f"PLA_CAP_{ano}", 0), errors="coerce"
     ).fillna(0)
 
-# base etapa 4
+# Merge com volumes RFQ por WC
 df_base = df_ip.merge(
     df_mrsrfq_wc,
     on="WC",
     how="left"
 )
 
-# preencher RFQ ausente
+# Garantir que todas as colunas MRSRFQ existam
 for ano in anos:
-    df_base[f"MRSRFQ_{ano}"] = df_base[f"MRSRFQ_{ano}"].fillna(0)
+    df_base[f"MRSRFQ_{ano}"] = df_base.get(f"MRSRFQ_{ano}", 0).fillna(0)
 
-# TOTAL CAP = PLA_CAP (modelo atual)
+# Total de capacidade = PLA_CAP (modelo atual)
 for ano in anos:
-    df_base[f"TOTAL_CAP_{ano}"] = df_base[f"PLA_CAP_{ano}"]
+    df_base[f"TOTAL_CAP_{ano}"] = df_base.get(f"PLA_CAP_{ano}", 0)
 
-# STATUS por ano
+# STATUS por ano: INVEST se MRSRFQ > TOTAL_CAP
 status_cols = []
 for ano in anos:
     col = f"STATUS_{ano}"
@@ -210,20 +213,19 @@ for ano in anos:
     )
     status_cols.append(col)
 
-# consolidado
+# Consolidado geral: se algum ano precisa investir → INVEST
 df_base["NECESSÁRIO INVESTIR?"] = np.where(
     df_base[status_cols].eq("INVEST").any(axis=1),
     "INVEST",
     "OK"
 )
 
-# filtro de WCs afetados
-st.checkbox("Mostrar apenas WCs afetados pelas RFQs", key="filtro_wc")
-
-if st.session_state.filtro_wc:
+# Filtro de WCs afetados
+filtro_wc = st.checkbox("Mostrar apenas WCs afetados pelas RFQs")
+if filtro_wc:
     df_base = df_base[df_base["NECESSÁRIO INVESTIR?"] == "INVEST"]
 
-# ordenação final
+# Ordenação final
 ordem = (
     ["NECESSÁRIO INVESTIR?", "WC", "Actual_machine", "OEE"]
     + [f"MRSRFQ_{ano}" for ano in anos]
@@ -231,7 +233,6 @@ ordem = (
     + [f"TOTAL_CAP_{ano}" for ano in anos]
     + status_cols
 )
-
 ordem = [c for c in ordem if c in df_base.columns]
 
 df_final = df_base[ordem].copy()

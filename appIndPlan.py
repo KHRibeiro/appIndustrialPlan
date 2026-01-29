@@ -78,12 +78,23 @@ df_rfq = pd.read_excel(
 df_rfq.columns = df_rfq.columns.astype(str).str.strip()
 df_rfq = df_rfq.rename(columns={"LINK": "RFQ"})
 
-anos = [c for c in df_rfq.columns if str(c).isdigit()]
+# Identificar colunas de ano (2026–2030)
+anos = []
+for c in df_rfq.columns:
+    c_str = str(c).strip()
+    if c_str.isdigit() and len(c_str) == 4:
+        anos.append(c_str)
+
 anos = sorted(anos)
 
-df_rfq_sel = df_rfq[df_rfq["RFQ"].isin(rfqs)][["RFQ"] + anos].copy()
-df_rfq_sel[anos] = df_rfq_sel[anos].fillna(0)
+# Garantir nomes como string
+df_rfq.columns = df_rfq.columns.map(str)
 
+df_rfq_sel = df_rfq[df_rfq["RFQ"].isin(rfqs)][["RFQ"] + anos].copy()
+df_rfq_sel[anos] = df_rfq_sel[anos].apply(pd.to_numeric, errors="coerce").fillna(0)
+
+
+df_rfq_sel[anos] = df_rfq_sel[anos].fillna(0)
 st.dataframe(df_rfq_sel, use_container_width=True)
 
 
@@ -119,8 +130,11 @@ df_ln = df_ln.dropna(subset=["Taxa"])
 df_volwc = df_ln.merge(df_rfq_sel, on="RFQ", how="inner")
 
 for ano in anos:
-    col = str(ano)
-    df_volwc[f"VOLWC_{col}"] = df_volwc[col] / df_volwc["Taxa"]
+    if ano not in df_volwc.columns:
+        st.error(f"Coluna de ano {ano} não encontrada após merge RFQ × LN")
+        st.stop()
+
+    df_volwc[f"VOLWC_{ano}"] = df_volwc[ano] / df_volwc["Taxa"]
 
 df_volwc = (
     df_volwc

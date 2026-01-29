@@ -356,11 +356,15 @@ df_req_cap = (
 df_req_cap.columns = [f"REQ_CAP_{int(c)}" for c in df_req_cap.columns]
 df_req_cap = df_req_cap.reset_index()
 
+# 🔧 NORMALIZAÇÃO DA CHAVE
+df_req_cap["WC"] = df_req_cap["WC"].astype(str).str.strip()
+
 # ---------------------
 # 2️⃣ Preparar CAPACIDADE TOTAL
-# TOTAL_CAP = PLA_CAP × OEE
 # ---------------------
 df_cap = df_industrial_plan.copy()
+
+df_cap["WC"] = df_cap["WC"].astype(str).str.strip()
 
 anos = [2026, 2027, 2028, 2029, 2030]
 

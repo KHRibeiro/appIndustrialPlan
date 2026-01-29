@@ -220,6 +220,11 @@ st.dataframe(
     use_container_width=True
 )
 
+df_ip_raw = pd.read_excel(
+    uploaded_file,
+    sheet_name="3_Industrial_Plan_Idash"
+)
+
 # =====================
 # ETAPA 3 – SIMULAÇÃO DE DEMANDA (RFQ × WC × ANO)
 # =====================
@@ -302,6 +307,40 @@ st.dataframe(
 # =====================
 # ETAPA 4 – CAPACIDADE E INVESTIMENTO
 # =====================
+
+df_ip_raw.columns = (
+    df_ip_raw.columns
+    .astype(str)
+    .str.strip()
+    .str.replace("\n", "", regex=False)
+    .str.replace("\xa0", "", regex=False)
+)
+
+df_industrial_plan = df_ip_raw.rename(
+    columns={
+        "Cent. Trab.": "WC",
+        "Capacidade planejada": "Capacidade_por_Maquina",
+        "Qtde máquinas": "Maquinas_Existentes",
+        "OEE": "OEE_percentual",
+    }
+)
+
+colunas_ip = [
+    "WC",
+    "Capacidade_por_Maquina",
+    "Maquinas_Existentes",
+    "OEE_percentual",
+]
+
+faltando = [c for c in colunas_ip if c not in df_industrial_plan.columns]
+
+if faltando:
+    st.error(f"Colunas faltantes no Industrial Plan: {faltando}")
+    st.stop()
+
+df_industrial_plan = df_industrial_plan[colunas_ip].copy()
+
+
 st.header("4️⃣ Capacidade, Máquinas e Investimento")
 
 st.info(

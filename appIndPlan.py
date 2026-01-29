@@ -89,14 +89,37 @@ df_rfq = df_rfq.rename(columns={"LINK": "RFQ"})
 #anos = [c for c in df_rfq.columns if c.isdigit()]
 
 # Detecta anos a partir das colunas do RFQ
-anos = sorted([c for c in df_rfq.columns if c.isdigit()])
+#anos = sorted([c for c in df_rfq.columns if c.isdigit()])
 
 # Adiciona o ano anterior ao primeiro (ex: 2025)
+#if anos:
+#    ano_anterior = str(int(anos[0]) - 1)
+#    anos = [ano_anterior] + anos
+
+#df_rfq = df_rfq[df_rfq["RFQ"].isin(rfqs)][["RFQ"] + anos].copy()
+#df_rfq[anos] = df_rfq[anos].apply(pd.to_numeric, errors="coerce").fillna(0)
+
+# Anos existentes na planilha RFQ
+anos_rfq = sorted([c for c in df_rfq.columns if c.isdigit()])
+
+# Anos da simulação (inclui ano anterior)
+anos = anos_rfq.copy()
 if anos:
     ano_anterior = str(int(anos[0]) - 1)
     anos = [ano_anterior] + anos
 
-df_rfq = df_rfq[df_rfq["RFQ"].isin(rfqs)][["RFQ"] + anos].copy()
+# Filtrar RFQs
+df_rfq = df_rfq[df_rfq["RFQ"].isin(rfqs)].copy()
+
+# Garantir colunas de ano (cria 2025 com zero)
+for ano in anos:
+    if ano not in df_rfq.columns:
+        df_rfq[ano] = 0
+
+# Seleção final
+df_rfq = df_rfq[["RFQ"] + anos]
+
+# Converter para numérico
 df_rfq[anos] = df_rfq[anos].apply(pd.to_numeric, errors="coerce").fillna(0)
 
 st.dataframe(df_rfq, use_container_width=True)

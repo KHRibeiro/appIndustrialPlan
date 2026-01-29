@@ -340,18 +340,23 @@ df_industrial_plan["WC"] = df_industrial_plan["WC"].astype(str).str.strip()
 
 
 # =========================
-# ETAPA 4 - FORMATO EXECUTIVO (WIDE)
+# ETAPA 4 - CONSOLIDAÇÃO FINAL (ANOS EM COLUNAS)
 # =========================
 
 import pandas as pd
-import numpy as np
 import streamlit as st
 
-st.header("📊 Industrial Plan Consolidado (Visão Executiva)")
+st.header("📊 Industrial Plan – Visão Executiva")
 
-# -------------------------
-# 1. Validação básica
-# -------------------------
+# -------------------------------------------------
+# 1. DataFrame base (vindo da Etapa 3)
+# -------------------------------------------------
+# IMPORTANTE: df_base_etapa4 DEVE EXISTIR
+df = df_base_etapa4.copy()
+
+# -------------------------------------------------
+# 2. Validação das colunas mínimas
+# -------------------------------------------------
 colunas_necessarias = [
     "WC",
     "Ano",
@@ -360,75 +365,62 @@ colunas_necessarias = [
     "Status"
 ]
 
-faltantes = [c for c in colunas_necessarias if c not in df_resultado_wc_ano.columns]
+faltantes = [c for c in colunas_necessarias if c not in df.columns]
 if faltantes:
-    st.error(f"Colunas faltantes no dataframe base: {faltantes}")
+    st.error(f"Colunas faltantes para a Etapa 4: {faltantes}")
     st.stop()
 
-# -------------------------
-# 2. Pivotar CARGA
-# -------------------------
-df_carga_wide = (
-    df_resultado_wc_ano
-    .pivot(index="WC", columns="Ano", values="Carga_Total_WC")
+# -------------------------------------------------
+# 3. Pivotar para formato WIDE
+# -------------------------------------------------
+df_carga = (
+    df.pivot(index="WC", columns="Ano", values="Carga_Total_WC")
     .add_prefix("CARGA_")
 )
 
-# -------------------------
-# 3. Pivotar CAPACIDADE
-# -------------------------
-df_cap_wide = (
-    df_resultado_wc_ano
-    .pivot(index="WC", columns="Ano", values="Capacidade_Total")
+df_cap = (
+    df.pivot(index="WC", columns="Ano", values="Capacidade_Total")
     .add_prefix("CAP_")
 )
 
-# -------------------------
-# 4. Pivotar STATUS
-# -------------------------
-df_status_wide = (
-    df_resultado_wc_ano
-    .pivot(index="WC", columns="Ano", values="Status")
+df_status = (
+    df.pivot(index="WC", columns="Ano", values="Status")
     .add_prefix("STATUS_")
 )
 
-# -------------------------
-# 5. Consolidar tudo
-# -------------------------
+# -------------------------------------------------
+# 4. Consolidar
+# -------------------------------------------------
 df_industrial_plan_final = (
-    df_carga_wide
-    .join(df_cap_wide)
-    .join(df_status_wide)
+    df_carga
+    .join(df_cap)
+    .join(df_status)
     .reset_index()
 )
 
-# -------------------------
-# 6. Ordenar colunas por ano
-# -------------------------
-anos = sorted(df_resultado_wc_ano["Ano"].unique())
+# -------------------------------------------------
+# 5. Ordenação das colunas
+# -------------------------------------------------
+anos = sorted(df["Ano"].unique())
 
-colunas_ordenadas = ["WC"]
-
+ordem = ["WC"]
 for ano in anos:
-    colunas_ordenadas.extend([
+    ordem.extend([
         f"CARGA_{ano}",
         f"CAP_{ano}",
         f"STATUS_{ano}"
     ])
 
-df_industrial_plan_final = df_industrial_plan_final[colunas_ordenadas]
+df_industrial_plan_final = df_industrial_plan_final[ordem]
 
-# -------------------------
-# 7. Exibição
-# -------------------------
-st.dataframe(
-    df_industrial_plan_final,
-    use_container_width=True
-)
+# -------------------------------------------------
+# 6. Exibição
+# -------------------------------------------------
+st.dataframe(df_industrial_plan_final, use_container_width=True)
 
-# -------------------------
-# 8. Download Excel
-# -------------------------
+# -------------------------------------------------
+# 7. Download Excel
+# -------------------------------------------------
 def to_excel(df):
     from io import BytesIO
     output = BytesIO()
@@ -437,8 +429,8 @@ def to_excel(df):
     return output.getvalue()
 
 st.download_button(
-    label="📥 Download Industrial Plan (Excel)",
-    data=to_excel(df_industrial_plan_final),
-    file_name="industrial_plan_final.xlsx",
+    "📥 Download Industrial Plan (Excel)",
+    to_excel(df_industrial_plan_final),
+    "industrial_plan_final.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )

@@ -149,14 +149,18 @@ for ano in anos:
 cols_mrsrfq = ["RFQ", "WC"] + [f"MRSRFQ_{ano}" for ano in anos]
 df_volwc = df_volwc[cols_mrsrfq]
 
-# consolidação por WC
+# consolidação por WC - Montagem de volumes por centro de trabalho
+#Não tem cálculo da fórmula 1
+
 df_mrsrfq_wc = (
     df_volwc
     .groupby("WC", as_index=False)
     .sum(numeric_only=True)
 )
 
+#Exibição dos dados
 st.dataframe(df_mrsrfq_wc, use_container_width=True)
+
 
 # =====================
 # ETAPA 4 – Capacidade & Investimento
@@ -193,6 +197,8 @@ df_base = df_ip.merge(
     on="WC",
     how="left"
 )
+
+st.dataframe(df_base, use_container_width=True)
 
 # Garantir que todas as colunas MRSRFQ existam
 for ano in anos:

@@ -86,7 +86,15 @@ df_rfq = pd.read_excel(
 df_rfq.columns = df_rfq.columns.astype(str).str.strip()
 df_rfq = df_rfq.rename(columns={"LINK": "RFQ"})
 
-anos = [c for c in df_rfq.columns if c.isdigit()]
+#anos = [c for c in df_rfq.columns if c.isdigit()]
+
+# Detecta anos a partir das colunas do RFQ
+anos = sorted([c for c in df_rfq.columns if c.isdigit()])
+
+# Adiciona o ano anterior ao primeiro (ex: 2025)
+if anos:
+    ano_anterior = str(int(anos[0]) - 1)
+    anos = [ano_anterior] + anos
 
 df_rfq = df_rfq[df_rfq["RFQ"].isin(rfqs)][["RFQ"] + anos].copy()
 df_rfq[anos] = df_rfq[anos].apply(pd.to_numeric, errors="coerce").fillna(0)

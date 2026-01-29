@@ -338,7 +338,49 @@ df_industrial_plan = df_industrial_plan[colunas_capacidade].copy()
 # Limpeza
 df_industrial_plan["WC"] = df_industrial_plan["WC"].astype(str).str.strip()
 
-df_base_etapa4 = df_industrial_plan
+# =========================
+# ETAPA 3.5 – PREPARAÇÃO PARA CAPACIDADE
+# =========================
+
+st.header("🔧 Preparação para Análise de Capacidade")
+
+# ---------------------
+# 1️⃣ Pivotar DEMANDA (REQ_CAP)
+# ---------------------
+df_req_cap = (
+    df_wc_ano
+    .pivot(index="WC", columns="Ano", values="Carga_Total_WC")
+    .fillna(0)
+)
+
+df_req_cap.columns = [f"REQ_CAP_{int(c)}" for c in df_req_cap.columns]
+df_req_cap = df_req_cap.reset_index()
+
+# ---------------------
+# 2️⃣ Preparar CAPACIDADE TOTAL
+# TOTAL_CAP = PLA_CAP × OEE
+# ---------------------
+df_cap = df_industrial_plan.copy()
+
+anos = [2026, 2027, 2028, 2029, 2030]
+
+for ano in anos:
+    pla = f"PLA_CAP_{ano}"
+    tot = f"TOTAL_CAP_{ano}"
+
+    df_cap[tot] = df_cap[pla] * (df_cap["OEE_percentual"] / 100)
+
+# ---------------------
+# 3️⃣ Merge DEMANDA × CAPACIDADE
+# ---------------------
+df_base_etapa4 = df_req_cap.merge(
+    df_cap,
+    on="WC",
+    how="left"
+)
+
+st.subheader("📋 Base consolidada para Etapa 4")
+st.dataframe(df_base_etapa4, use_container_width=True)
 
 # =========================
 # ETAPA 4 – CAPACIDADE & INVESTIMENTO (ANOS EM COLUNAS)

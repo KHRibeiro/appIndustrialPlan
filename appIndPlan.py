@@ -338,90 +338,84 @@ df_industrial_plan = df_industrial_plan[colunas_capacidade].copy()
 # Limpeza
 df_industrial_plan["WC"] = df_industrial_plan["WC"].astype(str).str.strip()
 
-
-# =========================
-# ETAPA 4 - CONSOLIDAÇÃO FINAL (ANOS EM COLUNAS)
-# =========================
-
-import pandas as pd
-import streamlit as st
-
 df_base_etapa4 = df_industrial_plan
 
-st.header("📊 Industrial Plan – Visão Executiva")
+# =========================
+# ETAPA 4 – CAPACIDADE & INVESTIMENTO (ANOS EM COLUNAS)
+# =========================
+
+import numpy as np
+import streamlit as st
+import pandas as pd
+
+st.header("4️⃣ Capacidade, Máquinas e Investimento")
 
 # -------------------------------------------------
-# 1. DataFrame base (vindo da Etapa 3)
+# DataFrame base (resultado da Etapa 3)
 # -------------------------------------------------
-# IMPORTANTE: df_base_etapa4 DEVE EXISTIR
 df = df_base_etapa4.copy()
 
 # -------------------------------------------------
-# 2. Validação das colunas mínimas
+# Identificar anos automaticamente
 # -------------------------------------------------
-colunas_necessarias = [
-    "WC",
-    "Ano",
-    "Carga_Total_WC",
-    "Capacidade_Total",
-    "Status"
-]
-
-faltantes = [c for c in colunas_necessarias if c not in df.columns]
-if faltantes:
-    st.error(f"Colunas faltantes para a Etapa 4: {faltantes}")
-    st.stop()
+anos = sorted({
+    int(c.split("_")[-1])
+    for c in df.columns
+    if c.startswith("REQ_CAP_")
+})
 
 # -------------------------------------------------
-# 3. Pivotar para formato WIDE
+# Verificação INVEST / OK
 # -------------------------------------------------
-df_carga = (
-    df.pivot(index="WC", columns="Ano", values="Carga_Total_WC")
-    .add_prefix("CARGA_")
-)
+status_cols = []
 
-df_cap = (
-    df.pivot(index="WC", columns="Ano", values="Capacidade_Total")
-    .add_prefix("CAP_")
-)
-
-df_status = (
-    df.pivot(index="WC", columns="Ano", values="Status")
-    .add_prefix("STATUS_")
-)
-
-# -------------------------------------------------
-# 4. Consolidar
-# -------------------------------------------------
-df_industrial_plan_final = (
-    df_carga
-    .join(df_cap)
-    .join(df_status)
-    .reset_index()
-)
-
-# -------------------------------------------------
-# 5. Ordenação das colunas
-# -------------------------------------------------
-anos = sorted(df["Ano"].unique())
-
-ordem = ["WC"]
 for ano in anos:
-    ordem.extend([
-        f"CARGA_{ano}",
-        f"CAP_{ano}",
-        f"STATUS_{ano}"
-    ])
+    col_req = f"REQ_CAP_{ano}"
+    col_cap = f"TOTAL_CAP_{ano}"
+    col_status = f"STATUS_{ano}"
 
-df_industrial_plan_final = df_industrial_plan_final[ordem]
+    if col_req in df.columns and col_cap in df.columns:
+        df[col_status] = np.where(
+            df[col_req] > df[col_cap],
+            "INVEST",
+            "OK"
+        )
+        status_cols.append(col_status)
 
 # -------------------------------------------------
-# 6. Exibição
+# Coluna consolidada (se INVEST em qualquer ano)
 # -------------------------------------------------
-st.dataframe(df_industrial_plan_final, use_container_width=True)
+df["NECESSÁRIO INVESTIR?"] = np.where(
+    df[status_cols].eq("INVEST").any(axis=1),
+    "INVEST",
+    "OK"
+)
 
 # -------------------------------------------------
-# 7. Download Excel
+# Ordenação final das colunas
+# -------------------------------------------------
+ordem = (
+    ["NECESSÁRIO INVESTIR?", "WC ID", "WC NAME", "Actual machine"]
+    + [f"MRSRFQ_{ano}" for ano in anos if f"MRSRFQ_{ano}" in df.columns]
+    + [f"MRS_{ano}" for ano in anos if f"MRS_{ano}" in df.columns]
+    + [f"REQ_CAP_{ano}" for ano in anos]
+    + [f"PLA_CAP_{ano}" for ano in anos if f"PLA_CAP_{ano}" in df.columns]
+    + [f"TOTAL_CAP_{ano}" for ano in anos]
+    + status_cols
+)
+
+# manter só colunas existentes
+ordem = [c for c in ordem if c in df.columns]
+
+df_final = df[ordem].copy()
+
+# -------------------------------------------------
+# Exibição
+# -------------------------------------------------
+st.dataframe(df_final, use_container_width=True)
+
+# -------------------------------------------------
+# Exportação
 # -------------------------------------------------
 def to_excel(df):
     from io import BytesIO
@@ -431,8 +425,8 @@ def to_excel(df):
     return output.getvalue()
 
 st.download_button(
-    "📥 Download Industrial Plan (Excel)",
-    to_excel(df_industrial_plan_final),
-    "industrial_plan_final.xlsx",
+    "📥 Exportar Industrial Plan Final",
+    to_excel(df_final),
+    "industrial_plan_simulado.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )

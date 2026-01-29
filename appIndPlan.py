@@ -144,22 +144,22 @@ df_volwc = df_ln.merge(df_rfq, on="RFQ", how="inner")
 
 # cálculo por ano
 for ano in anos:
-    df_volwc[f"MRSRFQ_{ano}"] = df_volwc[ano] / df_volwc["Taxa"]
+    df_volwc[f"VOLWC_{ano}"] = df_volwc[ano] / df_volwc["Taxa"]
 
-cols_mrsrfq = ["RFQ", "WC"] + [f"MRSRFQ_{ano}" for ano in anos]
-df_volwc = df_volwc[cols_mrsrfq]
+cols_volwc = ["RFQ", "WC"] + [f"VOLWC_{ano}" for ano in anos]
+df_volwc = df_volwc[cols_volwc]
 
 # consolidação por WC - Montagem de volumes por centro de trabalho
 #Não tem cálculo da fórmula 1
 
-df_mrsrfq_wc = (
+df_volwc_wc = (
     df_volwc
     .groupby("WC", as_index=False)
     .sum(numeric_only=True)
 )
 
 #Exibição dos dados
-st.dataframe(df_mrsrfq_wc, use_container_width=True)
+st.dataframe(df_volwc_wc, use_container_width=True)
 
 
 # =====================

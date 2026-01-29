@@ -146,9 +146,10 @@ df_ln_raw.columns = (
     .str.replace("\xa0", "", regex=False)
 )
 
-st.subheader("🔍 Diagnóstico – Colunas LN")
-st.write("Colunas originais:")
-st.write(list(df_ln_raw.columns))
+#diagnóstico de leitura
+#st.subheader("🔍 Diagnóstico – Colunas LN")
+#st.write("Colunas originais:")
+#st.write(list(df_ln_raw.columns))
 
 # Renomear colunas para padrão interno
 df_ln = df_ln_raw.rename(

@@ -300,20 +300,125 @@ st.dataframe(
 )
 
 # =====================
-# RESUMO EXECUTIVO
+# ETAPA 4 – CAPACIDADE E INVESTIMENTO
 # =====================
-st.header("📊 Resumo Executivo")
+st.header("4️⃣ Capacidade, Máquinas e Investimento")
 
-col1, col2, col3 = st.columns(3)
+st.info(
+    "Comparação entre a carga simulada (RFQs + demanda natural) "
+    "e a capacidade disponível por Centro de Trabalho (WC), "
+    "considerando OEE e parque atual de máquinas."
+)
 
-with col1:
-    st.metric("RFQs no Cenário", len(rfqs))
+# ---------------------
+# PRÉ-REQUISITOS
+# ---------------------
+# df_wc_ano → Etapa 3 (WC | Ano | Carga_Total_WC)
+# df_industrial_plan → dados base do Industrial Plan
+# ---------------------
 
-with col2:
-    st.metric("Centros de Trabalho Impactados", "--")
+if df_wc_ano.empty:
+    st.warning("Simulação de carga não encontrada. Execute a Etapa 3.")
+    st.stop()
 
-with col3:
-    st.metric("WCs com Necessidade de Investimento", "--")
+# =====================
+# EXEMPLO DE ESTRUTURA ESPERADA DO INDUSTRIAL PLAN
+# =====================
+# WC
+# Capacidade_por_Maquina   (ex: horas/ano ou unidades/ano)
+# Maquinas_Existentes
+# OEE_percentual           (ex: 85)
+
+# ---------------------
+# Merge carga × capacidade
+# ---------------------
+df_capacidade = df_wc_ano.merge(
+    df_industrial_plan,
+    on="WC",
+    how="left"
+)
+
+# ---------------------
+# Tratamento de dados
+# ---------------------
+df_capacidade["OEE_percentual"] = (
+    pd.to_numeric(df_capacidade["OEE_percentual"], errors="coerce")
+    .fillna(100)
+)
+
+df_capacidade["Capacidade_por_Maquina"] = (
+    pd.to_numeric(df_capacidade["Capacidade_por_Maquina"], errors="coerce")
+    .fillna(0)
+)
+
+df_capacidade["Maquinas_Existentes"] = (
+    pd.to_numeric(df_capacidade["Maquinas_Existentes"], errors="coerce")
+    .fillna(0)
+)
+
+# ---------------------
+# Capacidade efetiva por máquina (considerando OEE)
+# Excel: Capacidade Planejada × (OEE / 100)
+# ---------------------
+df_capacidade["Capacidade_Efetiva_por_Maquina"] = (
+    df_capacidade["Capacidade_por_Maquina"]
+    * (df_capacidade["OEE_percentual"] / 100)
+)
+
+# ---------------------
+# Capacidade total disponível
+# ---------------------
+df_capacidade["Capacidade_Total_Disponivel"] = (
+    df_capacidade["Capacidade_Efetiva_por_Maquina"]
+    * df_capacidade["Maquinas_Existentes"]
+)
+
+# ---------------------
+# Máquinas necessárias
+# Excel: Demanda / Capacidade por máquina
+# ---------------------
+df_capacidade["Maquinas_Necessarias"] = (
+    df_capacidade["Carga_Total_WC"]
+    / df_capacidade["Capacidade_Efetiva_por_Maquina"]
+)
+
+df_capacidade["Maquinas_Necessarias"] = (
+    df_capacidade["Maquinas_Necessarias"]
+    .replace([float("inf"), -float("inf")], 0)
+    .fillna(0)
+    .round(2)
+)
+
+# ---------------------
+# Status INVEST / OK
+# ---------------------
+df_capacidade["Status"] = df_capacidade.apply(
+    lambda x: "INVEST"
+    if x["Maquinas_Necessarias"] > x["Maquinas_Existentes"]
+    else "OK",
+    axis=1
+)
+
+# ---------------------
+# Exibição
+# ---------------------
+st.subheader("📊 Análise de Capacidade por WC e Ano")
+
+st.dataframe(
+    df_capacidade[
+        [
+            "WC",
+            "Ano",
+            "Carga_Total_WC",
+            "Capacidade_por_Maquina",
+            "OEE_percentual",
+            "Maquinas_Existentes",
+            "Maquinas_Necessarias",
+            "Status",
+        ]
+    ],
+    use_container_width=True
+)
 
 # =====================
 # EXPORTAÇÃO

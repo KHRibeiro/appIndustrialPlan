@@ -198,7 +198,7 @@ for ano in anos:
 #    how="left"
 #)
 
-st.dataframe(df_base, use_container_width=True)
+st.dataframe(df_mrsrfq_wc, use_container_width=True)
 
 # Garantir que todas as colunas MRSRFQ existam
 for ano in anos:

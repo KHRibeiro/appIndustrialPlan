@@ -339,95 +339,42 @@ df_industrial_plan = df_industrial_plan[colunas_capacidade].copy()
 df_industrial_plan["WC"] = df_industrial_plan["WC"].astype(str).str.strip()
 
 
-# =====================
-# ETAPA 4 – CAPACIDADE E INVESTIMENTO
-# =====================
-st.header("4️⃣ Capacidade, Máquinas e Investimento")
+# =========================
+# ETAPA 4 – FORMATO WIDE
+# =========================
 
-st.info(
-    "Comparação entre a carga simulada das RFQs e a capacidade planejada "
-    "por Centro de Trabalho (WC) e por ano."
+anos = sorted(df_capacidade["Ano"].unique())
+
+df_carga = df_capacidade.pivot(
+    index="WC",
+    columns="Ano",
+    values="Carga_Total_WC"
 )
 
-# ---------------------
-# Preparar carga simulada
-# ---------------------
-df_carga = df_wc_ano.copy()
-
-df_carga["Ano"] = df_carga["Ano"].astype(str)
-
-# Transformar capacidade (wide → long)
-df_cap_long = df_industrial_plan.melt(
-    id_vars=["WC", "Maquinas_Existentes", "OEE_percentual"],
-    value_vars=[
-        "PLA_CAP_2025",
-        "PLA_CAP_2026",
-        "PLA_CAP_2027",
-        "PLA_CAP_2028",
-        "PLA_CAP_2029",
-        "PLA_CAP_2030",
-    ],
-    var_name="Ano",
-    value_name="Capacidade_Planejada"
+df_cap = df_capacidade.pivot(
+    index="WC",
+    columns="Ano",
+    values="Capacidade_Planejada"
 )
 
-df_cap_long["Ano"] = df_cap_long["Ano"].str[-4:]  # extrai 2025..2030
-
-
-# =====================
-# PADRONIZAÇÃO DE CHAVES PARA MERGE
-# =====================
-
-# WC sempre como string
-df_carga["WC"] = df_carga["WC"].astype(str).str.strip()
-df_cap_long["WC"] = df_cap_long["WC"].astype(str).str.strip()
-
-# Ano sempre como string
-df_carga["Ano"] = df_carga["Ano"].astype(str)
-df_cap_long["Ano"] = df_cap_long["Ano"].astype(str)
-
-
-# ---------------------
-# Merge carga × capacidade
-# ---------------------
-df_capacidade = df_carga.merge(
-    df_cap_long,
-    on=["WC", "Ano"],
-    how="left"
+df_status = df_capacidade.pivot(
+    index="WC",
+    columns="Ano",
+    values="Status"
 )
 
-# ---------------------
-# Status INVEST / OK
-# Regra Excel:
-# SE Demanda > Capacidade → INVEST
-# ---------------------
-df_capacidade["Status"] = df_capacidade.apply(
-    lambda x: "INVEST"
-    if x["Carga_Total_WC"] > x["Capacidade_Planejada"]
-    else "OK",
-    axis=1
+# Renomear colunas
+df_carga.columns = [f"Carga_{ano}" for ano in df_carga.columns]
+df_cap.columns   = [f"Cap_{ano}"   for ano in df_cap.columns]
+df_status.columns = [f"Status_{ano}" for ano in df_status.columns]
+
+# Consolidar tudo
+df_capacidade_wide = (
+    df_carga
+    .join(df_cap)
+    .join(df_status)
+    .reset_index()
 )
-
-# ---------------------
-# Exibição
-# ---------------------
-st.subheader("📊 Análise de Capacidade por WC e Ano")
-
-st.dataframe(
-    df_capacidade[
-        [
-            "WC",
-            "Ano",
-            "Carga_Total_WC",
-            "Capacidade_Planejada",
-            "Maquinas_Existentes",
-            "OEE_percentual",
-            "Status",
-        ]
-    ],
-    use_container_width=True
-)
-
 # =====================
 # EXPORTAÇÃO
 # =====================

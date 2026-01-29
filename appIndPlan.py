@@ -194,23 +194,6 @@ for ano in anos:
 # Merge com VOLWC
 df_sim = df_sim.merge(df_volwc, on="WC", how="left")
 
-st.subheader("🧪 Diagnóstico RFQ")
-
-st.write("df_volwc (amostra):")
-st.write(df_volwc.head(10))
-
-st.write("Colunas df_volwc:")
-st.write(df_volwc.columns.tolist())
-
-st.write("VOLWC_2026 estatística:")
-if "VOLWC_2026" in df_volwc.columns:
-    st.write(df_volwc["VOLWC_2026"].describe())
-
-st.write("WCs em df_sim mas não em df_volwc:")
-st.write(
-    set(df_sim["WC"].unique()) - set(df_volwc["WC"].unique())
-)
-
 for ano in anos:
     col_rfqo = f"MRSRFQ_{ano}"
     col_vol = f"VOLWC_{ano}"

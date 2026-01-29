@@ -140,6 +140,10 @@ df_ln_raw = pd.read_excel(
 # Limpeza básica
 df_ln_raw.columns = df_ln_raw.columns.astype(str).str.strip()
 
+st.subheader("🔍 Diagnóstico – Colunas LN")
+st.write("Colunas originais:")
+st.write(list(df_ln_raw.columns))
+
 # Renomear colunas para padrão interno
 df_ln = df_ln_raw.rename(
     columns={

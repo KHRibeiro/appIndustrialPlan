@@ -185,33 +185,45 @@ df_ip = df_ip_raw.rename(
 # Limpar nomes de WCs
 df_ip["WC"] = df_ip["WC"].astype(str).str.strip()
 
-# Capacidades planejadas
+# Capacidades planejadas e requeridas
 for ano in anos:
-    df_ip[f"PLA_CAP_{ano}"] = pd.to_numeric(
-        df_ip.get(f"PLA_CAP_{ano}", 0), errors="coerce"
+    df_base[f"REQ_CAP_{ano}"] = pd.to_numeric(
+        df_base.get(f"REQ_CAP_{ano}", 0), errors="coerce"
     ).fillna(0)
 
-# Merge com volumes RFQ por WC
-#df_base = df_ip.merge(
-#    df_mrsrfq_wc,
-#    on="WC",
-#    how="left"
-#)
+    df_base[f"PLA_CAP_{ano}"] = pd.to_numeric(
+        df_base.get(f"PLA_CAP_{ano}", 0), errors="coerce"
+    ).fillna(0)
 
-df_base=df_ip
+#Fórmula 1
+#MRSRFQ_20XX=((REQ_CAP_20XX+VOLWC_20XX)/(PLA_CAP_20XX))×Actual machine
 
-#st.dataframe(df_mrsrfq_wc, use_container_width=True)
+df_base = df_ip.merge(
+    df_volwc_wc,
+    on="WC",
+    how="left"
+)
 
-# Garantir que todas as colunas MRSRFQ existam
+# Garantir que todas as colunas VOLWC existam
 for ano in anos:
-    if f"MRSRFQ_{ano}" not in df_base.columns:
-        df_base[f"MRSRFQ_{ano}"] = 0
-    else:
-        df_base[f"MRSRFQ_{ano}"] = df_base[f"MRSRFQ_{ano}"].fillna(0)
+    df_base[f"VOLWC_{ano}"] = df_base.get(f"VOLWC_{ano}", 0).fillna(0)
+
+
+# Calculo do MRSRFQ
+for ano in anos:
+    df_base[f"MRSRFQ_{ano}"] = np.where(
+        df_base[f"PLA_CAP_{ano}"] > 0,
+        (
+            (df_base[f"REQ_CAP_{ano}"] + df_base[f"VOLWC_{ano}"])
+            / df_base[f"PLA_CAP_{ano}"]
+        ) * df_base["Actual_machine"],
+        0
+    )
 
 # Total de capacidade = PLA_CAP (modelo atual)
 for ano in anos:
     df_base[f"TOTAL_CAP_{ano}"] = df_base.get(f"PLA_CAP_{ano}", 0)
+
 
 # STATUS por ano: INVEST se MRSRFQ > TOTAL_CAP
 status_cols = []

@@ -225,6 +225,10 @@ df_ip_raw = pd.read_excel(
     sheet_name="3_Industrial_Plan_Idash"
 )
 
+st.subheader("🔍 Colunas encontradas no Industrial Plan")
+st.write(df_ip_raw.columns.tolist())
+st.stop()
+
 # =====================
 # ETAPA 3 – SIMULAÇÃO DE DEMANDA (RFQ × WC × ANO)
 # =====================

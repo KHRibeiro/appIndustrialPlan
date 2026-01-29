@@ -269,6 +269,20 @@ df_view = df_sim.copy()
 if mostrar_apenas_afetados:
     df_view = df_view[df_view["WC_AFETADO_RFQ"]]
 
+
+
 df_final = df_view[colunas_finais]
 
+
+
 st.dataframe(df_final, use_container_width=True)
+
+
+st.write(
+    df_sim[[
+        "WC",
+        "MRSRFQ_ORIG_2026",
+        "MRSRFQ_2026",
+        "WC_AFETADO_RFQ"
+    ]].head(20)
+)

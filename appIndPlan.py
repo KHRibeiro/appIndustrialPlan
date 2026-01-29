@@ -169,14 +169,6 @@ df_industrial_plan["WC"] = (
     .str.strip()
 )
 
-st.subheader("🔎 Validação de WC")
-
-st.write("WCs LN (amostra):")
-st.write(df_ln["WC"].unique()[:10])
-
-st.write("WCs Industrial Plan (amostra):")
-st.write(df_industrial_plan["WC"].unique()[:10])
-
 df_ip.columns = df_ip.columns.astype(str).str.strip()
 
 df_ip = df_ip.rename(

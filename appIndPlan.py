@@ -168,12 +168,17 @@ df_ip = df_ip.rename(
 df_ip["WC"] = df_ip["WC"].astype(str).str.strip()
 df_volwc["WC"] = df_volwc["WC"].astype(str).str.strip()
 
-# Preservar MRSRFQ original
-for ano in anos:
-    df_ip[f"MRSRFQ_ORIG_{ano}"] = df_ip[f"MRSRFQ_{ano}"]
+# 🔴 CRÍTICO: criar df_sim ANTES de alterar MRSRFQ
+df_sim = df_ip.copy()
 
-# --- Soma RFQ ao MRS existente ---
-df_sim = df_ip.merge(df_volwc, on="WC", how="left")
+# Preservar MRSRFQ original NO df_sim
+for ano in anos:
+    col = f"MRSRFQ_{ano}"
+    if col in df_sim.columns:
+        df_sim[f"MRSRFQ_ORIG_{ano}"] = df_sim[col]
+
+# Merge com VOLWC
+df_sim = df_sim.merge(df_volwc, on="WC", how="left")
 
 for ano in anos:
     col_rfqo = f"MRSRFQ_{ano}"
@@ -191,20 +196,21 @@ st.dataframe(
 )
 
 
-# ---------------------
+# =====================
 # FLAG – WC AFETADO POR RFQs
-# ---------------------
-impacto_cols = []
+# =====================
+impacto = []
 
 for ano in anos:
-    col_novo = f"MRSRFQ_{ano}"
-    col_orig = f"MRSRFQ_ORIG_{ano}"
+    novo = f"MRSRFQ_{ano}"
+    orig = f"MRSRFQ_ORIG_{ano}"
 
-    impacto_cols.append(
-        df_sim[col_novo].fillna(0) > df_sim[col_orig].fillna(0)
-    )
+    if novo in df_sim.columns and orig in df_sim.columns:
+        impacto.append(
+            df_sim[novo].fillna(0) > df_sim[orig].fillna(0)
+        )
 
-df_sim["WC_AFETADO_RFQ"] = pd.concat(impacto_cols, axis=1).any(axis=1)
+df_sim["WC_AFETADO_RFQ"] = pd.concat(impacto, axis=1).any(axis=1)
 
 # =====================
 # ETAPA 4 – Capacidade & Investimento

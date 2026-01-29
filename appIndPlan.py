@@ -68,7 +68,7 @@ rfqs = st.session_state.rfqs
 # =====================
 # ETAPA 1 – RFQs | Volumes Brutos
 # =====================
-st.header("1️⃣ RFQs – Volumes Brutos")
+st.header("1️⃣ RFQs – Volumes Brutos de Vendas")
 
 df_rfq = pd.read_excel(
     uploaded_file,
@@ -78,136 +78,84 @@ df_rfq = pd.read_excel(
 df_rfq.columns = df_rfq.columns.astype(str).str.strip()
 df_rfq = df_rfq.rename(columns={"LINK": "RFQ"})
 
-# Identificar colunas de ano (2026–2030)
-anos = []
-for c in df_rfq.columns:
-    c_str = str(c).strip()
-    if c_str.isdigit() and len(c_str) == 4:
-        anos.append(c_str)
+anos = [c for c in df_rfq.columns if c.isdigit()]
 
-anos = sorted(anos)
+df_rfq = df_rfq[df_rfq["RFQ"].isin(rfqs)][["RFQ"] + anos].copy()
+df_rfq[anos] = df_rfq[anos].apply(pd.to_numeric, errors="coerce").fillna(0)
 
-# Garantir nomes como string
-df_rfq.columns = df_rfq.columns.map(str)
-
-df_rfq_sel = df_rfq[df_rfq["RFQ"].isin(rfqs)][["RFQ"] + anos].copy()
-df_rfq_sel[anos] = df_rfq_sel[anos].apply(pd.to_numeric, errors="coerce").fillna(0)
-
-
-df_rfq_sel[anos] = df_rfq_sel[anos].fillna(0)
-st.dataframe(df_rfq_sel, use_container_width=True)
+st.dataframe(df_rfq, use_container_width=True)
 
 
 # =====================
 # ETAPA 2 – LN | Distribuição por WC
 # =====================
-st.header("2️⃣ Distribuição por Centro de Trabalho (LN)")
 
-df_ln = pd.read_excel(
+st.header("2️⃣ Distribuição RFQ × WC (LN)")
+
+df_ln_raw = pd.read_excel(
     uploaded_file,
     sheet_name="2_LN_DadosExportados"
 )
 
-# Normalizar WC da LN para padrão do Industrial Plan
-df_ln["WC"] = (
-    "HOR-" +
-    df_ln["WC"]
-        .astype(str)
-        .str.strip()
-)
-
-df_ln.columns = (
-    df_ln.columns.astype(str)
+df_ln_raw.columns = (
+    df_ln_raw.columns.astype(str)
     .str.strip()
     .str.replace("\n", "", regex=False)
+    .str.replace("\xa0", "", regex=False)
 )
 
-df_ln = df_ln.rename(
-    columns={
-        "Item fabricado": "RFQ",
-        "Cent. Trab.": "WC",
-        "Taxa de produção": "Taxa"
-    }
-)
+rename_map = {}
+for c in df_ln_raw.columns:
+    if "Item" in c:
+        rename_map[c] = "RFQ"
+    elif "Cent" in c:
+        rename_map[c] = "WC"
+    elif "Taxa" in c:
+        rename_map[c] = "Taxa"
 
-df_ln = df_ln[df_ln["RFQ"].isin(rfqs)]
+df_ln = df_ln_raw.rename(columns=rename_map)
+
+colunas_req = ["RFQ", "WC", "Taxa"]
+faltantes = [c for c in colunas_req if c not in df_ln.columns]
+if faltantes:
+    st.error(f"Colunas ausentes na LN: {faltantes}")
+    st.stop()
+
+df_ln = df_ln[colunas_req].dropna()
 df_ln["Taxa"] = pd.to_numeric(df_ln["Taxa"], errors="coerce")
 df_ln = df_ln.dropna(subset=["Taxa"])
 
-# --- Cálculo VOLWC ---
-df_volwc = df_ln.merge(df_rfq_sel, on="RFQ", how="inner")
+# padronizar WC → HOR-
+df_ln["WC"] = "HOR-" + df_ln["WC"].astype(str).str.strip()
 
-for ano in anos:
-    if ano not in df_volwc.columns:
-        st.error(f"Coluna de ano {ano} não encontrada após merge RFQ × LN")
-        st.stop()
+df_ln = df_ln[df_ln["RFQ"].isin(rfqs)]
 
-    df_volwc[f"VOLWC_{ano}"] = df_volwc[ano] / df_volwc["Taxa"]
-
-df_volwc = (
-    df_volwc
-    .groupby("WC", as_index=False)[[f"VOLWC_{a}" for a in anos]]
-    .sum()
-)
-
-st.dataframe(df_volwc, use_container_width=True)
+st.dataframe(df_ln, use_container_width=True)
 
 
 # =====================
 # ETAPA 3 – Simulação de Demanda
 # =====================
-st.header("3️⃣ Simulação de Demanda – Industrial Plan")
+st.header("3️⃣ Simulação de Demanda Industrial")
 
-df_ip = pd.read_excel(
-    uploaded_file,
-    sheet_name="3_Industrial_Plan_Idash"
-)
+# RFQ × WC
+df_volwc = df_ln.merge(df_rfq, on="RFQ", how="inner")
 
-df_industrial_plan["WC"] = (
-    df_industrial_plan["WC"]
-    .astype(str)
-    .str.strip()
-)
-
-df_ip.columns = df_ip.columns.astype(str).str.strip()
-
-df_ip = df_ip.rename(
-    columns={
-        "WC ID": "WC",
-        "Actual machine": "Actual_machine",
-        "Standard Oee": "OEE"
-    }
-)
-
-df_ip["WC"] = df_ip["WC"].astype(str).str.strip()
-df_volwc["WC"] = df_volwc["WC"].astype(str).str.strip()
-
-# 🔴 CRÍTICO: criar df_sim ANTES de alterar MRSRFQ
-df_sim = df_ip.copy()
-
-# Preservar MRSRFQ original NO df_sim
+# cálculo por ano
 for ano in anos:
-    col = f"MRSRFQ_{ano}"
-    if col in df_sim.columns:
-        df_sim[f"MRSRFQ_ORIG_{ano}"] = df_sim[col]
+    df_volwc[f"MRSRFQ_{ano}"] = df_volwc[ano] / df_volwc["Taxa"]
 
-# Merge com VOLWC
-df_sim = df_sim.merge(df_volwc, on="WC", how="left")
+cols_mrsrfq = ["RFQ", "WC"] + [f"MRSRFQ_{ano}" for ano in anos]
+df_volwc = df_volwc[cols_mrsrfq]
 
-for ano in anos:
-    col_rfqo = f"MRSRFQ_{ano}"
-    col_vol = f"VOLWC_{ano}"
-
-    if col_vol in df_sim.columns:
-        df_sim[col_rfqo] = (
-            df_sim[col_rfqo].fillna(0) +
-            df_sim[col_vol].fillna(0)
-        )
-
-st.dataframe(
-    df_sim[["WC"] + [f"MRSRFQ_{a}" for a in anos]],
-    use_container_width=True
+# consolidação por WC
+df_mrsrfq_wc = (
+    df_volwc
+    .groupby("WC", as_index=False)
+    .sum(numeric_only=True)
 )
+
+st.dataframe(df_mrsrfq_wc, use_container_width=True)
 
 
 # =====================
@@ -231,72 +179,79 @@ df_sim["WC_AFETADO_RFQ"] = pd.concat(impacto, axis=1).any(axis=1)
 # =====================
 st.header("4️⃣ Capacidade, Máquinas e Investimento")
 
-status_cols = []
+df_ip_raw = pd.read_excel(
+    uploaded_file,
+    sheet_name="3_Industrial_Plan_Idash"
+)
 
+df_ip = df_ip_raw.rename(
+    columns={
+        "WC ID": "WC",
+        "Actual machine": "Actual_machine",
+        "Standard Oee": "OEE"
+    }
+)
+
+df_ip["WC"] = df_ip["WC"].astype(str).str.strip()
+
+# capacidades planejadas
 for ano in anos:
-    req = f"REQ_CAP_{ano}"
-    pla = f"PLA_CAP_{ano}"
-    qtde = f"QTDE_STR_{ano}"
+    df_ip[f"PLA_CAP_{ano}"] = pd.to_numeric(
+        df_ip.get(f"PLA_CAP_{ano}", 0), errors="coerce"
+    ).fillna(0)
 
-    # Capacidade planejada considerando OEE
-    df_sim[pla] = df_sim[qtde] * (df_sim["OEE"] / 100)
-
-    # Regra de investimento
-    status = f"STATUS_{ano}"
-    df_sim[status] = df_sim[req].fillna(0) >= df_sim[pla].fillna(0)
-    status_cols.append(status)
-
-# Consolidado
-df_sim["NECESSÁRIO INVESTIR?"] = (
-    df_sim[status_cols]
-    .any(axis=1)
-    .map({True: "INVEST", False: "OK"})
+# base etapa 4
+df_base = df_ip.merge(
+    df_mrsrfq_wc,
+    on="WC",
+    how="left"
 )
 
-# Exibição final
-colunas_finais = (
-    ["NECESSÁRIO INVESTIR?", "WC", "Actual_machine"]
-    + [f"MRSRFQ_{a}" for a in anos]
-    + [f"REQ_CAP_{a}" for a in anos]
-    + [f"PLA_CAP_{a}" for a in anos]
+# preencher RFQ ausente
+for ano in anos:
+    df_base[f"MRSRFQ_{ano}"] = df_base[f"MRSRFQ_{ano}"].fillna(0)
+
+# TOTAL CAP = PLA_CAP (modelo atual)
+for ano in anos:
+    df_base[f"TOTAL_CAP_{ano}"] = df_base[f"PLA_CAP_{ano}"]
+
+# STATUS por ano
+status_cols = []
+for ano in anos:
+    col = f"STATUS_{ano}"
+    df_base[col] = np.where(
+        df_base[f"MRSRFQ_{ano}"] > df_base[f"TOTAL_CAP_{ano}"],
+        "INVEST",
+        "OK"
+    )
+    status_cols.append(col)
+
+# consolidado
+df_base["NECESSÁRIO INVESTIR?"] = np.where(
+    df_base[status_cols].eq("INVEST").any(axis=1),
+    "INVEST",
+    "OK"
 )
 
-# ---------------------
-# FILTRO – WCs AFETADOS POR RFQs
-# ---------------------
-st.subheader("🔎 Filtro de Visualização")
+# filtro de WCs afetados
+st.checkbox("Mostrar apenas WCs afetados pelas RFQs", key="filtro_wc")
 
-mostrar_apenas_afetados = st.checkbox(
-    "Mostrar apenas WCs afetados pelas RFQs",
-    value=True
+if st.session_state.filtro_wc:
+    df_base = df_base[
+        df_base[[f"MRSRFQ_{ano}" for ano in anos]].sum(axis=1) > 0
+    ]
+
+# ordenação final
+ordem = (
+    ["NECESSÁRIO INVESTIR?", "WC", "Actual_machine", "OEE"]
+    + [f"MRSRFQ_{ano}" for ano in anos]
+    + [f"PLA_CAP_{ano}" for ano in anos]
+    + [f"TOTAL_CAP_{ano}" for ano in anos]
+    + status_cols
 )
 
-# Identificar colunas VOLWC
-col_volwc = [f"VOLWC_{ano}" for ano in anos if f"VOLWC_{ano}" in df_sim.columns]
+ordem = [c for c in ordem if c in df_base.columns]
 
-# Criar flag de impacto
-df_sim["WC_AFETADO_RFQ"] = df_sim[col_volwc].sum(axis=1) > 0
-
-# Aplicar filtro se marcado
-df_view = df_sim.copy()
-
-if mostrar_apenas_afetados:
-    df_view = df_view[df_view["WC_AFETADO_RFQ"]]
-
-
-
-df_final = df_view[colunas_finais]
-
-
+df_final = df_base[ordem].copy()
 
 st.dataframe(df_final, use_container_width=True)
-
-
-st.write(
-    df_sim[[
-        "WC",
-        "MRSRFQ_ORIG_2026",
-        "MRSRFQ_2026",
-        "WC_AFETADO_RFQ"
-    ]].head(20)
-)

@@ -346,6 +346,8 @@ df_industrial_plan["WC"] = df_industrial_plan["WC"].astype(str).str.strip()
 import pandas as pd
 import streamlit as st
 
+df_base_etapa4 = df_industrial_plan
+
 st.header("📊 Industrial Plan – Visão Executiva")
 
 # -------------------------------------------------

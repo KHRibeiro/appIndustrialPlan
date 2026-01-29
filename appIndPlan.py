@@ -320,3 +320,29 @@ ordem = [c for c in ordem if c in df_base.columns]
 df_final = df_base[ordem].copy()
 
 st.dataframe(df_final, use_container_width=True)
+
+# =====================
+# EXPORTAÇÃO
+# =====================
+st.markdown("### 📤 Exportar resultado")
+
+buffer = io.BytesIO()
+
+with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
+    df_final.to_excel(
+        writer,
+        index=False,
+        sheet_name="Simulacao_Capacidade"
+    )
+
+buffer.seek(0)
+
+if df_final.empty:
+    st.warning("Nada para exportar.")
+else:
+    st.download_button(
+    label="⬇️ Exportar para Excel",
+    data=buffer,
+    file_name = f"Simulacao_RFQ_{len(rfqs)}_RFQs.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)

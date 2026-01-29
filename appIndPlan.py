@@ -225,9 +225,9 @@ df_ip_raw = pd.read_excel(
     sheet_name="3_Industrial_Plan_Idash"
 )
 
-st.subheader("🔍 Colunas encontradas no Industrial Plan")
-st.write(df_ip_raw.columns.tolist())
-st.stop()
+#st.subheader("🔍 Colunas encontradas no Industrial Plan")
+#st.write(df_ip_raw.columns.tolist())
+#st.stop()
 
 # =====================
 # ETAPA 3 – SIMULAÇÃO DE DEMANDA (RFQ × WC × ANO)
@@ -308,136 +308,88 @@ st.dataframe(
     use_container_width=True
 )
 
-# =====================
-# ETAPA 4 – CAPACIDADE E INVESTIMENTO
-# =====================
 
-df_ip_raw.columns = (
-    df_ip_raw.columns
-    .astype(str)
-    .str.strip()
-    .str.replace("\n", "", regex=False)
-    .str.replace("\xa0", "", regex=False)
-)
-
+# =====================
+# INDUSTRIAL PLAN – BASE DE CAPACIDADE
+# =====================
 df_industrial_plan = df_ip_raw.rename(
     columns={
-        "Cent. Trab.": "WC",
-        "Capacidade planejada": "Capacidade_por_Maquina",
-        "Qtde máquinas": "Maquinas_Existentes",
-        "OEE": "OEE_percentual",
+        "WC ID": "WC",
+        "Actual machine": "Maquinas_Existentes",
+        "Standard Oee": "OEE_percentual",
     }
 )
 
-colunas_ip = [
+# Manter apenas colunas necessárias
+colunas_capacidade = [
     "WC",
-    "Capacidade_por_Maquina",
     "Maquinas_Existentes",
     "OEE_percentual",
+    "PLA_CAP_2025",
+    "PLA_CAP_2026",
+    "PLA_CAP_2027",
+    "PLA_CAP_2028",
+    "PLA_CAP_2029",
+    "PLA_CAP_2030",
 ]
 
-faltando = [c for c in colunas_ip if c not in df_industrial_plan.columns]
+df_industrial_plan = df_industrial_plan[colunas_capacidade].copy()
 
-if faltando:
-    st.error(f"Colunas faltantes no Industrial Plan: {faltando}")
-    st.stop()
-
-df_industrial_plan = df_industrial_plan[colunas_ip].copy()
+# Limpeza
+df_industrial_plan["WC"] = df_industrial_plan["WC"].astype(str).str.strip()
 
 
+# =====================
+# ETAPA 4 – CAPACIDADE E INVESTIMENTO
+# =====================
 st.header("4️⃣ Capacidade, Máquinas e Investimento")
 
 st.info(
-    "Comparação entre a carga simulada (RFQs + demanda natural) "
-    "e a capacidade disponível por Centro de Trabalho (WC), "
-    "considerando OEE e parque atual de máquinas."
+    "Comparação entre a carga simulada das RFQs e a capacidade planejada "
+    "por Centro de Trabalho (WC) e por ano."
 )
 
 # ---------------------
-# PRÉ-REQUISITOS
+# Preparar carga simulada
 # ---------------------
-# df_wc_ano → Etapa 3 (WC | Ano | Carga_Total_WC)
-# df_industrial_plan → dados base do Industrial Plan
-# ---------------------
+df_carga = df_wc_ano.copy()
 
-if df_wc_ano.empty:
-    st.warning("Simulação de carga não encontrada. Execute a Etapa 3.")
-    st.stop()
+df_carga["Ano"] = df_carga["Ano"].astype(str)
 
-# =====================
-# EXEMPLO DE ESTRUTURA ESPERADA DO INDUSTRIAL PLAN
-# =====================
-# WC
-# Capacidade_por_Maquina   (ex: horas/ano ou unidades/ano)
-# Maquinas_Existentes
-# OEE_percentual           (ex: 85)
+# Transformar capacidade (wide → long)
+df_cap_long = df_industrial_plan.melt(
+    id_vars=["WC", "Maquinas_Existentes", "OEE_percentual"],
+    value_vars=[
+        "PLA_CAP_2025",
+        "PLA_CAP_2026",
+        "PLA_CAP_2027",
+        "PLA_CAP_2028",
+        "PLA_CAP_2029",
+        "PLA_CAP_2030",
+    ],
+    var_name="Ano",
+    value_name="Capacidade_Planejada"
+)
+
+df_cap_long["Ano"] = df_cap_long["Ano"].str[-4:]  # extrai 2025..2030
 
 # ---------------------
 # Merge carga × capacidade
 # ---------------------
-df_capacidade = df_wc_ano.merge(
-    df_industrial_plan,
-    on="WC",
+df_capacidade = df_carga.merge(
+    df_cap_long,
+    on=["WC", "Ano"],
     how="left"
 )
 
 # ---------------------
-# Tratamento de dados
-# ---------------------
-df_capacidade["OEE_percentual"] = (
-    pd.to_numeric(df_capacidade["OEE_percentual"], errors="coerce")
-    .fillna(100)
-)
-
-df_capacidade["Capacidade_por_Maquina"] = (
-    pd.to_numeric(df_capacidade["Capacidade_por_Maquina"], errors="coerce")
-    .fillna(0)
-)
-
-df_capacidade["Maquinas_Existentes"] = (
-    pd.to_numeric(df_capacidade["Maquinas_Existentes"], errors="coerce")
-    .fillna(0)
-)
-
-# ---------------------
-# Capacidade efetiva por máquina (considerando OEE)
-# Excel: Capacidade Planejada × (OEE / 100)
-# ---------------------
-df_capacidade["Capacidade_Efetiva_por_Maquina"] = (
-    df_capacidade["Capacidade_por_Maquina"]
-    * (df_capacidade["OEE_percentual"] / 100)
-)
-
-# ---------------------
-# Capacidade total disponível
-# ---------------------
-df_capacidade["Capacidade_Total_Disponivel"] = (
-    df_capacidade["Capacidade_Efetiva_por_Maquina"]
-    * df_capacidade["Maquinas_Existentes"]
-)
-
-# ---------------------
-# Máquinas necessárias
-# Excel: Demanda / Capacidade por máquina
-# ---------------------
-df_capacidade["Maquinas_Necessarias"] = (
-    df_capacidade["Carga_Total_WC"]
-    / df_capacidade["Capacidade_Efetiva_por_Maquina"]
-)
-
-df_capacidade["Maquinas_Necessarias"] = (
-    df_capacidade["Maquinas_Necessarias"]
-    .replace([float("inf"), -float("inf")], 0)
-    .fillna(0)
-    .round(2)
-)
-
-# ---------------------
 # Status INVEST / OK
+# Regra Excel:
+# SE Demanda > Capacidade → INVEST
 # ---------------------
 df_capacidade["Status"] = df_capacidade.apply(
     lambda x: "INVEST"
-    if x["Maquinas_Necessarias"] > x["Maquinas_Existentes"]
+    if x["Carga_Total_WC"] > x["Capacidade_Planejada"]
     else "OK",
     axis=1
 )
@@ -453,10 +405,9 @@ st.dataframe(
             "WC",
             "Ano",
             "Carga_Total_WC",
-            "Capacidade_por_Maquina",
-            "OEE_percentual",
+            "Capacidade_Planejada",
             "Maquinas_Existentes",
-            "Maquinas_Necessarias",
+            "OEE_percentual",
             "Status",
         ]
     ],

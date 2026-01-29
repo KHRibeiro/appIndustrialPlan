@@ -192,11 +192,11 @@ for ano in anos:
     ).fillna(0)
 
 # Merge com volumes RFQ por WC
-df_base = df_ip.merge(
-    df_mrsrfq_wc,
-    on="WC",
-    how="left"
-)
+#df_base = df_ip.merge(
+#    df_mrsrfq_wc,
+#    on="WC",
+#    how="left"
+#)
 
 st.dataframe(df_base, use_container_width=True)
 

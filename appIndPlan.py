@@ -168,6 +168,10 @@ df_ip = df_ip.rename(
 df_ip["WC"] = df_ip["WC"].astype(str).str.strip()
 df_volwc["WC"] = df_volwc["WC"].astype(str).str.strip()
 
+# Preservar MRSRFQ original
+for ano in anos:
+    df_ip[f"MRSRFQ_ORIG_{ano}"] = df_ip[f"MRSRFQ_{ano}"]
+
 # --- Soma RFQ ao MRS existente ---
 df_sim = df_ip.merge(df_volwc, on="WC", how="left")
 
@@ -186,6 +190,21 @@ st.dataframe(
     use_container_width=True
 )
 
+
+# ---------------------
+# FLAG – WC AFETADO POR RFQs
+# ---------------------
+impacto_cols = []
+
+for ano in anos:
+    col_novo = f"MRSRFQ_{ano}"
+    col_orig = f"MRSRFQ_ORIG_{ano}"
+
+    impacto_cols.append(
+        df_sim[col_novo].fillna(0) > df_sim[col_orig].fillna(0)
+    )
+
+df_sim["WC_AFETADO_RFQ"] = pd.concat(impacto_cols, axis=1).any(axis=1)
 
 # =====================
 # ETAPA 4 – Capacidade & Investimento

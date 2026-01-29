@@ -373,6 +373,20 @@ df_cap_long = df_industrial_plan.melt(
 
 df_cap_long["Ano"] = df_cap_long["Ano"].str[-4:]  # extrai 2025..2030
 
+
+# =====================
+# PADRONIZAÇÃO DE CHAVES PARA MERGE
+# =====================
+
+# WC sempre como string
+df_carga["WC"] = df_carga["WC"].astype(str).str.strip()
+df_cap_long["WC"] = df_cap_long["WC"].astype(str).str.strip()
+
+# Ano sempre como string
+df_carga["Ano"] = df_carga["Ano"].astype(str)
+df_cap_long["Ano"] = df_cap_long["Ano"].astype(str)
+
+
 # ---------------------
 # Merge carga × capacidade
 # ---------------------

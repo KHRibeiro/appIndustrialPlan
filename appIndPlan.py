@@ -221,49 +221,83 @@ st.dataframe(
 )
 
 # =====================
-# ETAPA 3 – SIMULAÇÃO DE DEMANDA
+# ETAPA 3 – SIMULAÇÃO DE DEMANDA (RFQ × WC × ANO)
 # =====================
 st.header("3️⃣ Simulação de Demanda – Industrial Plan")
 
 st.info(
-    "Soma da demanda natural do Plano Industrial "
-    "com os volumes calculados das RFQs selecionadas "
-    "(planilha **3_Industrial_Plan_Idash**)."
+    "Conversão da demanda das RFQs em carga industrial por Centro de Trabalho (WC), "
+    "considerando a taxa de produção específica de cada RFQ."
 )
 
-df_demanda = pd.DataFrame({
-    "Ano": [],
-    "Centro de Trabalho (WC)": [],
-    "Demanda Natural (Industrial Plan)": [],
-    "Demanda RFQs": [],
-    "Demanda Total Simulada": []
-})
+# ---------------------
+# PRÉ-REQUISITOS
+# df_rfq_raw → Etapa 1 (RFQ | 2026..2030)
+# df_ln       → Etapa 2 (RFQ | WC | Taxa)
+# ---------------------
 
-st.dataframe(df_demanda)
+# Validação básica
+if df_rfq_raw.empty or df_ln.empty:
+    st.warning("Dados insuficientes para simulação. Verifique as Etapas 1 e 2.")
+    st.stop()
 
-# =====================
-# ETAPA 4 – CAPACIDADE E INVESTIMENTO
-# =====================
-st.header("4️⃣ Capacidade, Máquinas e Investimento")
+# ---------------------
+# 1️⃣ RFQ × ANO → formato longo
+# ---------------------
+anos = ["2026", "2027", "2028", "2029", "2030"]
 
-st.info(
-    "Análise de capacidade considerando quantidade de máquinas, "
-    "capacidade planejada, OEE e verificação de necessidade de investimento."
+df_demanda_long = df_rfq_raw.melt(
+    id_vars=["RFQ"],
+    value_vars=anos,
+    var_name="Ano",
+    value_name="Volume"
 )
 
-df_capacidade = pd.DataFrame({
-    "Ano": [],
-    "Centro de Trabalho (WC)": [],
-    "Capacidade Planejada": [],
-    "OEE (%)": [],
-    "Capacidade Efetiva": [],
-    "Demanda Total": [],
-    "Máquinas Existentes": [],
-    "Máquinas Necessárias": [],
-    "Status": []  # OK / INVEST
-})
+df_demanda_long["Volume"] = (
+    pd.to_numeric(df_demanda_long["Volume"], errors="coerce")
+    .fillna(0)
+)
 
-st.dataframe(df_capacidade)
+# ---------------------
+# 2️⃣ Cruzamento RFQ × WC
+# ---------------------
+df_simulacao = df_demanda_long.merge(
+    df_ln,
+    on="RFQ",
+    how="inner"
+)
+
+# ---------------------
+# 3️⃣ Cálculo da carga por WC
+# Regra: Carga = Volume × Taxa
+# ---------------------
+df_simulacao["Carga_WC"] = df_simulacao["Volume"] * df_simulacao["Taxa"]
+
+# ---------------------
+# 4️⃣ Consolidação por WC e Ano
+# ---------------------
+df_wc_ano = (
+    df_simulacao
+    .groupby(["WC", "Ano"], as_index=False)
+    .agg(
+        Carga_Total_WC=("Carga_WC", "sum")
+    )
+)
+
+# ---------------------
+# 5️⃣ Exibição dos resultados
+# ---------------------
+st.subheader("📋 Detalhamento RFQ × WC × Ano")
+st.dataframe(
+    df_simulacao[["RFQ", "Ano", "WC", "Volume", "Taxa", "Carga_WC"]],
+    use_container_width=True
+)
+
+st.subheader("🏭 Carga Total por Centro de Trabalho (WC)")
+st.dataframe(
+    df_wc_ano,
+    use_container_width=True
+)
 
 # =====================
 # RESUMO EXECUTIVO

@@ -185,6 +185,12 @@ df_ip = df_ip_raw.rename(
 # Limpar nomes de WCs
 df_ip["WC"] = df_ip["WC"].astype(str).str.strip()
 
+df_base = df_ip.merge(
+    df_volwc_wc,
+    on="WC",
+    how="left"
+)
+
 # Capacidades planejadas e requeridas
 for ano in anos:
     df_base[f"REQ_CAP_{ano}"] = pd.to_numeric(
@@ -195,21 +201,14 @@ for ano in anos:
         df_base.get(f"PLA_CAP_{ano}", 0), errors="coerce"
     ).fillna(0)
 
-#Fórmula 1
-#MRSRFQ_20XX=((REQ_CAP_20XX+VOLWC_20XX)/(PLA_CAP_20XX))×Actual machine
-
-df_base = df_ip.merge(
-    df_volwc_wc,
-    on="WC",
-    how="left"
-)
-
 # Garantir que todas as colunas VOLWC existam
 for ano in anos:
     df_base[f"VOLWC_{ano}"] = df_base.get(f"VOLWC_{ano}", 0).fillna(0)
 
 
 # Calculo do MRSRFQ
+#Fórmula 1
+#MRSRFQ_20XX=((REQ_CAP_20XX+VOLWC_20XX)/(PLA_CAP_20XX))×Actual machine
 for ano in anos:
     df_base[f"MRSRFQ_{ano}"] = np.where(
         df_base[f"PLA_CAP_{ano}"] > 0,

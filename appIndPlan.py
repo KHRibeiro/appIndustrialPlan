@@ -236,12 +236,13 @@ for ano in anos:
     df_base[f"TOTAL_CAP_{ano}"] = df_base.get(f"PLA_CAP_{ano}", 0)
 
 
-# STATUS por ano: INVEST se MRSRFQ > TOTAL_CAP
+# STATUS por ano: INVEST se máquinas requeridas > máquinas atuais
 status_cols = []
+
 for ano in anos:
     col = f"STATUS_{ano}"
     df_base[col] = np.where(
-        df_base[f"MRSRFQ_{ano}"] > df_base[f"TOTAL_CAP_{ano}"],
+        df_base[f"MRSRFQ_{ano}"] > df_base["Actual_machine"],
         "INVEST",
         "OK"
     )

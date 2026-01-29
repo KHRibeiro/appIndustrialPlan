@@ -237,7 +237,8 @@ if filtro_wc:
 ordem = (
     ["NECESSÁRIO INVESTIR?", "WC", "Actual_machine", "OEE"]
     + [f"MRSRFQ_{ano}" for ano in anos]
-    + [f"PLA_CAP_{ano}" for ano in anos]
+    #+ [f"PLA_CAP_{ano}" for ano in anos]
+    + [f"MRS_{ano}" for ano in anos]
     + [f"TOTAL_CAP_{ano}" for ano in anos]
     + status_cols
 )

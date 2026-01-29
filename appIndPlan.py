@@ -177,7 +177,7 @@ df_ip_raw = pd.read_excel(
 df_ip = df_ip_raw.rename(
     columns={
         "WC ID": "WC",
-        "WC Name": "WC_NAME",
+        "WC NAME": "WC_NAME",
         "Actual machine": "Actual_machine",
         "Standard Oee": "OEE"
     }

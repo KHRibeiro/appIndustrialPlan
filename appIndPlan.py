@@ -11,6 +11,28 @@ st.set_page_config(
     layout="wide"
 )
 
+tab_simulacao, tab_alteracoes = st.tabs([
+    "📊 Simulação de RFQs",
+    "✏️ Alterações em volumes existentes"
+])
+
+with tab_simulacao:
+
+    st.title("Simulador de Capacidade Industrial")
+    st.caption("Simulação de demanda e capacidade baseada em RFQs – horizonte de 5 anos")
+
+    # SIDEBAR
+    st.sidebar.header("RFQs no Cenário")
+    ...
+    # ETAPA 1 – RFQs | Volumes Brutos
+    ...
+    # ETAPA 2 – LN
+    ...
+    # ETAPA 3 – Simulação
+    ...
+    # ETAPA 4 – Capacidade
+    ...
+
 st.title("Simulador de Capacidade Industrial")
 st.caption("Simulação de demanda e capacidade baseada em RFQs – horizonte de 5 anos")
 
@@ -346,3 +368,11 @@ else:
     file_name = f"Simulacao_RFQ_{len(rfqs)}_RFQs.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
+
+
+with tab_alteracoes:
+
+    st.header("Alterações em Volumes Existentes")
+
+    if "df_rfq_editado" not in st.session_state:
+        st.session_state.df_rfq_editado = df_rfq.copy()
